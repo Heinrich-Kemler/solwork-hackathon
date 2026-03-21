@@ -5,7 +5,7 @@ import { useConnection } from "@solana/wallet-adapter-react";
 import { PROGRAM_ID } from "./anchor";
 
 /**
- * Subscribes to on-chain logs for the SolWork program.
+ * Subscribes to on-chain logs for the Accord program.
  * Calls `onEvent` whenever a transaction touches the program,
  * which triggers a refresh of job data.
  */

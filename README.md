@@ -1,6 +1,6 @@
-# SolWork — Anchor Backend (Round 4)
+# Accord — Anchor Backend (Round 4)
 
-SolWork is a Solana devnet freelance escrow program using Anchor + SPL Token USDC escrow.
+Accord is a Solana devnet freelance escrow program using Anchor + SPL Token USDC escrow.
 
 ## Program
 

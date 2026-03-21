@@ -43,7 +43,7 @@ export default function WelcomeModal() {
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={dismiss} />
       <div className="relative max-w-sm w-full mx-4 p-6 rounded-2xl animate-slide-up space-y-4" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
         <h2 className="text-2xl font-bold text-center" style={{ color: 'var(--text-primary)' }}>
-          Welcome to SolWork
+          Welcome to Accord
         </h2>
         <p className="text-sm text-center" style={{ color: 'var(--text-secondary)' }}>
           Set up your profile to get started — it takes 30 seconds.

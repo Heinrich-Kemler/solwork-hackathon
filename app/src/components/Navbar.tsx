@@ -38,7 +38,7 @@ export default function Navbar() {
       <div className="flex items-center gap-5">
         <Link href="/" className="flex items-center gap-1.5">
           <span className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-            Sol<span style={{ color: 'var(--accent)' }}>Work</span>
+            Acc<span style={{ color: 'var(--accent)' }}>ord</span>
           </span>
         </Link>
 

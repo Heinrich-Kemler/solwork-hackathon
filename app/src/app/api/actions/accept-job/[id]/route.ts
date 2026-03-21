@@ -16,7 +16,7 @@ export async function GET(
 
   const payload = {
     type: "action",
-    title: `Accept Job on SolWork`,
+    title: `Accept Job on Accord`,
     icon: "https://raw.githubusercontent.com/nicolo-ribaudo/tc39-proposal-symbols-as-weakmap-keys/master/logo.svg",
     description: `Accept this freelance job and start working. Job ID: ${id}`,
     label: "Accept Job",
@@ -33,7 +33,7 @@ export async function POST(
 
   return NextResponse.json(
     {
-      message: `Visit https://solwork.app/jobs/${id} to accept this job.`,
+      message: `Visit https://accord.work/jobs/${id} to accept this job.`,
     },
     { status: 200, headers: HEADERS }
   );

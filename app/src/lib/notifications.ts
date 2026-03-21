@@ -1,5 +1,5 @@
 /**
- * Email notification helpers for SolWork.
+ * Email notification helpers for Accord.
  * Sends notifications via the /api/notify endpoint.
  */
 

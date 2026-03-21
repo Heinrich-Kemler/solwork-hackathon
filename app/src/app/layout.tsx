@@ -18,9 +18,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "solwork — Trustless Freelance Escrow on Solana",
+  title: "Accord — Trustless Freelance. On-Chain.",
   description:
-    "Milestone-based freelance escrow dApp. Client locks SOL, freelancer delivers, funds release instantly on approval.",
+    "Trustless milestone-based freelance escrow on Solana. Lock funds, deliver work, get paid instantly.",
 };
 
 export default function RootLayout({

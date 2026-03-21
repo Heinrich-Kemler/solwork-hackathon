@@ -80,7 +80,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto px-6 py-20">
           <h2 className="text-3xl font-bold text-center mb-3" style={{ color: 'var(--text-primary)' }}>Our Solution</h2>
           <p className="text-center mb-12 max-w-xl mx-auto" style={{ color: 'var(--text-muted)' }}>
-            SolWork replaces middlemen with smart contracts. Every guarantee is enforced by code.
+            Accord replaces middlemen with smart contracts. Every guarantee is enforced by code.
           </p>
           <div className="grid md:grid-cols-3 gap-6">
             {[

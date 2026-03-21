@@ -101,7 +101,7 @@ export default function OnboardingPage() {
   if (!connected) {
     return (
       <div className="max-w-md mx-auto px-6 py-20 text-center space-y-6">
-        <h1 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Welcome to SolWork</h1>
+        <h1 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Welcome to Accord</h1>
         <p style={{ color: 'var(--text-secondary)' }}>Connect your wallet to get started.</p>
         <WalletMultiButton />
       </div>

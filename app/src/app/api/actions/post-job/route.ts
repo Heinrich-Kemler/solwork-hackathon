@@ -11,7 +11,7 @@ const HEADERS = {
 export async function GET() {
   const payload = {
     type: "action",
-    title: "Post a Job on SolWork",
+    title: "Post a Job on Accord",
     icon: "https://raw.githubusercontent.com/nicolo-ribaudo/tc39-proposal-symbols-as-weakmap-keys/master/logo.svg",
     description:
       "Create a freelance job and lock USDC in a trustless escrow on Solana. Freelancers can accept, deliver work, and get paid instantly.",
@@ -39,7 +39,7 @@ export async function POST() {
   return NextResponse.json(
     {
       message:
-        "Visit https://solwork.app/post to create a job with full form support.",
+        "Visit https://accord.work/post to create a job with full form support.",
     },
     { status: 200, headers: HEADERS }
   );
