@@ -56,6 +56,8 @@ export default function OnboardingPage() {
         website: skip ? "" : website.trim(),
         telegram: skip ? "" : telegram.trim(),
         avatar: skip ? "" : avatarUrl.trim(),
+        skills: [],
+        available: false,
       };
       saveProfile(localData);
 

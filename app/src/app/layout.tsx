@@ -5,6 +5,7 @@ import "./globals.css";
 import WalletProvider from "@/components/WalletProvider";
 import { ToastProvider } from "@/components/TxToast";
 import Navbar from "@/components/Navbar";
+import WelcomeModal from "@/components/WelcomeModal";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,6 +38,7 @@ export default function RootLayout({
           <ToastProvider>
             <Navbar />
             <main className="flex-1">{children}</main>
+            <WelcomeModal />
           </ToastProvider>
         </WalletProvider>
         <Script
