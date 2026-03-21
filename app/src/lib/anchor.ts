@@ -1,12 +1,94 @@
 import { AnchorProvider, Program, BN } from "@coral-xyz/anchor";
-import { PublicKey, Connection, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import {
+  PublicKey,
+  Connection,
+  SystemProgram,
+  SYSVAR_RENT_PUBKEY,
+} from "@solana/web3.js";
+import {
+  TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddressSync,
+} from "@solana/spl-token";
 import type { AnchorWallet } from "@solana/wallet-adapter-react";
 import idl from "./idl.json";
 
+// ── Constants ──────────────────────────────────────────────────────────────
+
 export const PROGRAM_ID = new PublicKey(idl.address);
+export const USDC_DEVNET_MINT = new PublicKey(
+  "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+);
+export const TREASURY_WALLET = new PublicKey(
+  "Fg6PaFpoGXkYsidMpWxTWqkYMdL4C9dQW9i7RkQ4xkfj"
+);
+
+// ── Types ──────────────────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type SolworkProgram = Program<any>;
+
+export type JobStatus =
+  | "Open"
+  | "Active"
+  | "PendingReview"
+  | "Complete"
+  | "Disputed"
+  | "Expired"
+  | "Cancelled";
+
+export interface JobAccount {
+  publicKey: PublicKey;
+  title: string;
+  description: string;
+  amount: BN;
+  client: PublicKey;
+  freelancer: PublicKey;
+  status: JobStatus;
+  milestoneApproved: boolean;
+  createdAt: BN;
+  expiryTime: BN;
+  gracePeriod: BN;
+  submittedAt: BN;
+  workDescription: string;
+  disputeReason: string;
+  jobId: BN;
+  jobBump: number;
+  vaultBump: number;
+}
+
+export const STATUS_LABELS: Record<JobStatus, string> = {
+  Open: "Open",
+  Active: "Active",
+  PendingReview: "Pending Review",
+  Complete: "Complete",
+  Disputed: "Disputed",
+  Expired: "Expired",
+  Cancelled: "Cancelled",
+};
+
+export function calcReputation(jobsCompleted: number, totalEarned: number, disputesRaised: number): number {
+  return Math.max(0, (jobsCompleted * 10) + Math.floor(totalEarned) - (disputesRaised * 5));
+}
+
+export function getReputationTier(score: number): { label: string; class: string } {
+  if (score >= 200) return { label: "Elite", class: "badge-active" };
+  if (score >= 100) return { label: "Expert", class: "badge-open" };
+  if (score >= 50) return { label: "Trusted", class: "badge-pending" };
+  if (score >= 10) return { label: "Rising", class: "badge-complete" };
+  return { label: "New", class: "badge-complete" };
+}
+
+export const STATUS_BADGE_CLASS: Record<JobStatus, string> = {
+  Open: "badge badge-open",
+  Active: "badge badge-active",
+  PendingReview: "badge badge-pending",
+  Complete: "badge badge-complete",
+  Disputed: "badge badge-disputed",
+  Expired: "badge badge-expired",
+  Cancelled: "badge badge-cancelled",
+};
+
+// ── Provider / Program ─────────────────────────────────────────────────────
 
 export function getProvider(
   connection: Connection,
@@ -22,64 +104,55 @@ export function getProgram(provider: AnchorProvider): SolworkProgram {
   return new Program(idl as any, provider);
 }
 
-export function getEscrowPDA(
-  clientPubkey: PublicKey,
-  jobTitle: string
-): [PublicKey, number] {
+// ── PDA Derivation ─────────────────────────────────────────────────────────
+
+export function getJobPDA(client: PublicKey, jobId: BN): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
-    [Buffer.from("escrow"), clientPubkey.toBuffer(), Buffer.from(jobTitle)],
+    [Buffer.from("job"), client.toBuffer(), jobId.toArrayLike(Buffer, "le", 8)],
     PROGRAM_ID
   );
 }
 
-export function getVaultPDA(
-  clientPubkey: PublicKey,
-  jobTitle: string
-): [PublicKey, number] {
+export function getVaultPDA(jobPDA: PublicKey): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
-    [Buffer.from("vault"), clientPubkey.toBuffer(), Buffer.from(jobTitle)],
+    [Buffer.from("vault"), jobPDA.toBuffer()],
     PROGRAM_ID
   );
 }
 
-export function solToLamports(sol: number): BN {
-  return new BN(Math.round(sol * LAMPORTS_PER_SOL));
+export function getProfilePDA(owner: PublicKey): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("profile"), owner.toBuffer()],
+    PROGRAM_ID
+  );
 }
 
-export function lamportsToSol(lamports: BN | number): number {
-  const val = typeof lamports === "number" ? lamports : lamports.toNumber();
-  return val / LAMPORTS_PER_SOL;
-}
-
-export type EscrowStatus =
-  | "Open"
-  | "InProgress"
-  | "Completed"
-  | "Disputed"
-  | "Cancelled";
-
-export interface EscrowAccount {
-  publicKey: PublicKey;
-  client: PublicKey;
-  freelancer: PublicKey;
-  amount: BN;
-  jobTitle: string;
-  jobDescription: string;
-  status: EscrowStatus;
-  bump: number;
-  vaultBump: number;
-  createdAt: BN;
-}
+// ── Status Parsing ─────────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function parseEscrowStatus(status: any): EscrowStatus {
+export function parseJobStatus(status: any): JobStatus {
   if (status.open) return "Open";
-  if (status.inProgress) return "InProgress";
-  if (status.completed) return "Completed";
+  if (status.active) return "Active";
+  if (status.pendingReview) return "PendingReview";
+  if (status.complete) return "Complete";
   if (status.disputed) return "Disputed";
+  if (status.expired) return "Expired";
   if (status.cancelled) return "Cancelled";
   return "Open";
 }
+
+// ── USDC Helpers ───────────────────────────────────────────────────────────
+
+export function usdcToSmallest(usdc: number): BN {
+  return new BN(Math.round(usdc * 1_000_000));
+}
+
+export function smallestToUsdc(amount: BN | number): number {
+  const val = typeof amount === "number" ? amount : amount.toNumber();
+  return val / 1_000_000;
+}
+
+// ── Explorer URLs ──────────────────────────────────────────────────────────
 
 export function explorerUrl(signature: string): string {
   return `https://explorer.solana.com/tx/${signature}?cluster=devnet`;
@@ -89,74 +162,145 @@ export function explorerAccountUrl(address: string): string {
   return `https://explorer.solana.com/address/${address}?cluster=devnet`;
 }
 
-// ── Transaction helpers (avoid deep type inference issues) ──────────────
+// ── Transaction Helpers ────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function rpc(program: SolworkProgram, method: string, args: any[], accounts: Record<string, PublicKey>): Promise<string> {
+async function rpc(
+  program: SolworkProgram,
+  method: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  args: any[],
+  accounts: Record<string, PublicKey>
+): Promise<string> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const builder = (program.methods as any)[method](...args);
   return builder.accounts(accounts).rpc() as Promise<string>;
 }
 
-export async function txCreateEscrow(
+export async function txInitProfile(
+  program: SolworkProgram,
+  signer: PublicKey
+): Promise<string> {
+  const [profilePDA] = getProfilePDA(signer);
+  return rpc(program, "initProfile", [], {
+    signer,
+    profile: profilePDA,
+    systemProgram: SystemProgram.programId,
+  });
+}
+
+export async function txCreateJob(
   program: SolworkProgram,
   client: PublicKey,
+  jobId: BN,
   title: string,
   description: string,
-  amount: BN,
+  amount: BN
 ): Promise<string> {
-  const [escrowPDA] = getEscrowPDA(client, title);
-  const [vaultPDA] = getVaultPDA(client, title);
-  return rpc(program, "createEscrow", [title, description, amount], {
+  const [jobPDA] = getJobPDA(client, jobId);
+  const [vaultPDA] = getVaultPDA(jobPDA);
+  const clientUsdcAta = getAssociatedTokenAddressSync(USDC_DEVNET_MINT, client);
+
+  return rpc(program, "createJob", [jobId, title, description, amount], {
     client,
-    escrow: escrowPDA,
+    job: jobPDA,
+    usdcMint: USDC_DEVNET_MINT,
+    clientUsdcAta,
     escrowVault: vaultPDA,
-    systemProgram: new PublicKey("11111111111111111111111111111111"),
+    tokenProgram: TOKEN_PROGRAM_ID,
+    systemProgram: SystemProgram.programId,
+    rent: SYSVAR_RENT_PUBKEY,
   });
 }
 
 export async function txAcceptJob(
   program: SolworkProgram,
   freelancer: PublicKey,
-  escrowPubkey: PublicKey,
-): Promise<string> {
-  return rpc(program, "acceptJob", [], { freelancer, escrow: escrowPubkey });
-}
-
-export async function txApproveAndRelease(
-  program: SolworkProgram,
   client: PublicKey,
-  escrowPubkey: PublicKey,
-  freelancer: PublicKey,
-  jobTitle: string,
+  jobId: BN
 ): Promise<string> {
-  const [vaultPDA] = getVaultPDA(client, jobTitle);
-  return rpc(program, "approveAndRelease", [], {
-    client,
-    escrow: escrowPubkey,
-    escrowVault: vaultPDA,
+  const [jobPDA] = getJobPDA(client, jobId);
+  return rpc(program, "acceptJob", [jobId], {
     freelancer,
+    client,
+    job: jobPDA,
   });
 }
 
-export async function txRaiseDispute(
+export async function txSubmitWork(
   program: SolworkProgram,
+  freelancer: PublicKey,
   client: PublicKey,
-  escrowPubkey: PublicKey,
+  jobId: BN,
+  workDescription: string
 ): Promise<string> {
-  return rpc(program, "raiseDispute", [], { client, escrow: escrowPubkey });
+  const [jobPDA] = getJobPDA(client, jobId);
+  return rpc(program, "submitWork", [jobId, workDescription], {
+    freelancer,
+    client,
+    job: jobPDA,
+  });
 }
 
-export async function txCancelEscrow(
+export async function txApproveJob(
   program: SolworkProgram,
   client: PublicKey,
-  escrowPubkey: PublicKey,
-  jobTitle: string,
+  freelancer: PublicKey,
+  jobId: BN
 ): Promise<string> {
-  const [vaultPDA] = getVaultPDA(client, jobTitle);
-  return rpc(program, "cancelEscrow", [], {
+  const [jobPDA] = getJobPDA(client, jobId);
+  const [vaultPDA] = getVaultPDA(jobPDA);
+  const freelancerUsdcAta = getAssociatedTokenAddressSync(USDC_DEVNET_MINT, freelancer);
+  const treasuryUsdcAta = getAssociatedTokenAddressSync(USDC_DEVNET_MINT, TREASURY_WALLET);
+  const [clientProfilePDA] = getProfilePDA(client);
+  const [freelancerProfilePDA] = getProfilePDA(freelancer);
+
+  return rpc(program, "approveJob", [jobId], {
     client,
-    escrow: escrowPubkey,
+    job: jobPDA,
+    usdcMint: USDC_DEVNET_MINT,
     escrowVault: vaultPDA,
+    freelancer,
+    freelancerUsdcAta,
+    treasuryUsdcAta,
+    clientProfile: clientProfilePDA,
+    freelancerProfile: freelancerProfilePDA,
+    tokenProgram: TOKEN_PROGRAM_ID,
+  });
+}
+
+export async function txDisputeJob(
+  program: SolworkProgram,
+  actor: PublicKey,
+  client: PublicKey,
+  jobId: BN,
+  disputeReason: string
+): Promise<string> {
+  const [jobPDA] = getJobPDA(client, jobId);
+  const [actorProfilePDA] = getProfilePDA(actor);
+
+  return rpc(program, "disputeJob", [jobId, disputeReason], {
+    actor,
+    client,
+    job: jobPDA,
+    actorProfile: actorProfilePDA,
+  });
+}
+
+export async function txCancelJob(
+  program: SolworkProgram,
+  client: PublicKey,
+  jobId: BN
+): Promise<string> {
+  const [jobPDA] = getJobPDA(client, jobId);
+  const [vaultPDA] = getVaultPDA(jobPDA);
+  const clientUsdcAta = getAssociatedTokenAddressSync(USDC_DEVNET_MINT, client);
+
+  return rpc(program, "cancelJob", [jobId], {
+    client,
+    job: jobPDA,
+    usdcMint: USDC_DEVNET_MINT,
+    escrowVault: vaultPDA,
+    clientUsdcAta,
+    tokenProgram: TOKEN_PROGRAM_ID,
   });
 }

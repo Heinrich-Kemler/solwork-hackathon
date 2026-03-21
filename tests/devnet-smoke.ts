@@ -1,6 +1,8 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { Keypair, PublicKey, clusterApiUrl } from "@solana/web3.js";
+import fs from "fs";
+import path from "path";
 import {
   getAccount,
   getOrCreateAssociatedTokenAccount,
@@ -10,6 +12,9 @@ import { Solwork } from "../target/types/solwork";
 
 const DEVNET_USDC_MINT = new PublicKey(
   "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+);
+const TREASURY_WALLET = new PublicKey(
+  "Fg6PaFpoGXkYsidMpWxTWqkYMdL4C9dQW9i7RkQ4xkfj"
 );
 
 async function run(): Promise<void> {
@@ -26,11 +31,12 @@ async function run(): Promise<void> {
     throw new Error("Set SOLWORK_PROGRAM_ID to the deployed devnet program ID.");
   }
 
-  const program = new Program<Solwork>(
-    anchor.workspace.solwork.idl as Solwork,
-    new PublicKey(programIdRaw),
-    provider
-  );
+  const idlPath = path.resolve(__dirname, "../target/idl/solwork.json");
+  const idl = JSON.parse(fs.readFileSync(idlPath, "utf8")) as anchor.Idl & {
+    address?: string;
+  };
+  idl.address = programIdRaw;
+  const program = new Program(idl, provider) as Program<Solwork>;
 
   const freelancer = Keypair.generate();
   const jobId = new anchor.BN(Date.now());
@@ -61,11 +67,56 @@ async function run(): Promise<void> {
     )
   ).address;
 
-  const airdropSig = await connection.requestAirdrop(
-    freelancer.publicKey,
-    anchor.web3.LAMPORTS_PER_SOL
+  await provider.sendAndConfirm(
+    new anchor.web3.Transaction().add(
+      anchor.web3.SystemProgram.transfer({
+        fromPubkey: wallet.publicKey,
+        toPubkey: freelancer.publicKey,
+        lamports: 1_000_000_000,
+      })
+    ),
+    []
   );
-  await connection.confirmTransaction(airdropSig, "confirmed");
+
+  const treasuryUsdcAta = (
+    await getOrCreateAssociatedTokenAccount(
+      connection,
+      wallet.payer,
+      DEVNET_USDC_MINT,
+      TREASURY_WALLET,
+      true
+    )
+  ).address;
+
+  const [clientProfile] = PublicKey.findProgramAddressSync(
+    [Buffer.from("profile"), wallet.publicKey.toBuffer()],
+    program.programId
+  );
+  const [freelancerProfile] = PublicKey.findProgramAddressSync(
+    [Buffer.from("profile"), freelancer.publicKey.toBuffer()],
+    program.programId
+  );
+
+  if (!(await connection.getAccountInfo(clientProfile))) {
+    await program.methods
+      .initProfile()
+      .accounts({
+        signer: wallet.publicKey,
+        profile: clientProfile,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
+      .rpc();
+  }
+
+  await program.methods
+    .initProfile()
+    .accounts({
+      signer: freelancer.publicKey,
+      profile: freelancerProfile,
+      systemProgram: anchor.web3.SystemProgram.programId,
+    } as any)
+    .signers([freelancer])
+    .rpc();
 
   const [jobPda] = PublicKey.findProgramAddressSync(
     [
@@ -91,7 +142,7 @@ async function run(): Promise<void> {
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: anchor.web3.SystemProgram.programId,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-    })
+    } as any)
     .rpc();
 
   const acceptSig = await program.methods
@@ -100,7 +151,17 @@ async function run(): Promise<void> {
       freelancer: freelancer.publicKey,
       client: wallet.publicKey,
       job: jobPda,
-    })
+    } as any)
+    .signers([freelancer])
+    .rpc();
+
+  const submitSig = await program.methods
+    .submitWork(jobId, "Smoke-test deliverable submitted")
+    .accounts({
+      freelancer: freelancer.publicKey,
+      client: wallet.publicKey,
+      job: jobPda,
+    } as any)
     .signers([freelancer])
     .rpc();
 
@@ -113,8 +174,11 @@ async function run(): Promise<void> {
       escrowVault: vaultPda,
       freelancer: freelancer.publicKey,
       freelancerUsdcAta,
+      treasuryUsdcAta,
+      clientProfile,
+      freelancerProfile,
       tokenProgram: TOKEN_PROGRAM_ID,
-    })
+    } as any)
     .rpc();
 
   const job = await program.account.job.fetch(jobPda);
@@ -128,6 +192,7 @@ async function run(): Promise<void> {
   console.log(`Job PDA: ${jobPda.toBase58()}`);
   console.log(`Create tx: ${createSig}`);
   console.log(`Accept tx: ${acceptSig}`);
+  console.log(`Submit tx: ${submitSig}`);
   console.log(`Approve tx: ${approveSig}`);
 }
 

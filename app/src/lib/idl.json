@@ -9,9 +9,6 @@
   "instructions": [
     {
       "name": "accept_job",
-      "docs": [
-        "Freelancer accepts an open job."
-      ],
       "discriminator": [
         43,
         201,
@@ -29,161 +26,19 @@
           "signer": true
         },
         {
-          "name": "escrow",
-          "writable": true
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "approve_and_release",
-      "docs": [
-        "Client approves the work — SOL releases to freelancer instantly."
-      ],
-      "discriminator": [
-        63,
-        254,
-        154,
-        45,
-        149,
-        32,
-        80,
-        236
-      ],
-      "accounts": [
-        {
-          "name": "client",
-          "writable": true,
-          "signer": true
+          "name": "client"
         },
         {
-          "name": "escrow",
-          "writable": true
-        },
-        {
-          "name": "escrow_vault",
+          "name": "job",
           "writable": true,
           "pda": {
             "seeds": [
               {
                 "kind": "const",
                 "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "client"
-              },
-              {
-                "kind": "account",
-                "path": "escrow.job_title",
-                "account": "Escrow"
-              }
-            ]
-          }
-        },
-        {
-          "name": "freelancer",
-          "writable": true
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "cancel_escrow",
-      "docs": [
-        "Client cancels an open escrow (no freelancer yet) and reclaims SOL."
-      ],
-      "discriminator": [
-        156,
-        203,
-        54,
-        179,
-        38,
-        72,
-        33,
-        21
-      ],
-      "accounts": [
-        {
-          "name": "client",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "escrow",
-          "writable": true
-        },
-        {
-          "name": "escrow_vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "client"
-              },
-              {
-                "kind": "account",
-                "path": "escrow.job_title",
-                "account": "Escrow"
-              }
-            ]
-          }
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "create_escrow",
-      "docs": [
-        "Client creates an escrow, locking SOL for a single-milestone job."
-      ],
-      "discriminator": [
-        253,
-        215,
-        165,
-        116,
-        36,
-        108,
-        68,
-        80
-      ],
-      "accounts": [
-        {
-          "name": "client",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "escrow",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  101,
-                  115,
-                  99,
-                  114,
+                  106,
                   111,
-                  119
+                  98
                 ]
               },
               {
@@ -192,49 +47,421 @@
               },
               {
                 "kind": "arg",
-                "path": "job_title"
+                "path": "job_id"
               }
             ]
           }
-        },
-        {
-          "name": "escrow_vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "client"
-              },
-              {
-                "kind": "arg",
-                "path": "job_title"
-              }
-            ]
-          }
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "job_title",
+          "name": "job_id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "approve_job",
+      "discriminator": [
+        201,
+        133,
+        238,
+        82,
+        103,
+        63,
+        234,
+        131
+      ],
+      "accounts": [
+        {
+          "name": "client",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "job",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  106,
+                  111,
+                  98
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "client"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "escrow_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "job"
+              }
+            ]
+          }
+        },
+        {
+          "name": "freelancer"
+        },
+        {
+          "name": "freelancer_usdc_ata",
+          "writable": true
+        },
+        {
+          "name": "treasury_usdc_ata",
+          "writable": true
+        },
+        {
+          "name": "client_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "client"
+              }
+            ]
+          }
+        },
+        {
+          "name": "freelancer_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "freelancer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "job_id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "cancel_job",
+      "discriminator": [
+        126,
+        241,
+        155,
+        241,
+        50,
+        236,
+        83,
+        118
+      ],
+      "accounts": [
+        {
+          "name": "client",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "job",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  106,
+                  111,
+                  98
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "client"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "escrow_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "job"
+              }
+            ]
+          }
+        },
+        {
+          "name": "client_usdc_ata",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "job_id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "claim_after_grace",
+      "discriminator": [
+        84,
+        68,
+        82,
+        106,
+        173,
+        47,
+        149,
+        50
+      ],
+      "accounts": [
+        {
+          "name": "freelancer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "client"
+        },
+        {
+          "name": "job",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  106,
+                  111,
+                  98
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "client"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "escrow_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "job"
+              }
+            ]
+          }
+        },
+        {
+          "name": "freelancer_usdc_ata",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "job_id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "create_job",
+      "discriminator": [
+        178,
+        130,
+        217,
+        110,
+        100,
+        27,
+        82,
+        119
+      ],
+      "accounts": [
+        {
+          "name": "client",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "job",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  106,
+                  111,
+                  98
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "client"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "client_usdc_ata",
+          "writable": true
+        },
+        {
+          "name": "escrow_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "job"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "job_id",
+          "type": "u64"
+        },
+        {
+          "name": "title",
           "type": "string"
         },
         {
-          "name": "job_description",
+          "name": "description",
           "type": "string"
         },
         {
@@ -244,19 +471,182 @@
       ]
     },
     {
-      "name": "raise_dispute",
-      "docs": [
-        "Client raises a dispute (MVP: just flags it, no arbiter yet)."
-      ],
+      "name": "dispute_job",
       "discriminator": [
-        41,
-        243,
+        101,
+        104,
+        253,
+        231,
         1,
-        51,
-        150,
-        95,
-        246,
-        73
+        139,
+        108,
+        100
+      ],
+      "accounts": [
+        {
+          "name": "actor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "client"
+        },
+        {
+          "name": "job",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  106,
+                  111,
+                  98
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "client"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "actor_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "actor"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "job_id",
+          "type": "u64"
+        },
+        {
+          "name": "dispute_reason",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "expire_job",
+      "discriminator": [
+        127,
+        5,
+        119,
+        250,
+        214,
+        255,
+        102,
+        168
+      ],
+      "accounts": [
+        {
+          "name": "caller",
+          "signer": true
+        },
+        {
+          "name": "client"
+        },
+        {
+          "name": "job",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  106,
+                  111,
+                  98
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "client"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "escrow_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "job"
+              }
+            ]
+          }
+        },
+        {
+          "name": "client_usdc_ata",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "job_id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "extend_deadline",
+      "discriminator": [
+        18,
+        209,
+        27,
+        175,
+        87,
+        13,
+        213,
+        188
       ],
       "accounts": [
         {
@@ -265,25 +655,418 @@
           "signer": true
         },
         {
-          "name": "escrow",
-          "writable": true
+          "name": "job",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  106,
+                  111,
+                  98
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "client"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "job_id",
+          "type": "u64"
+        },
+        {
+          "name": "extra_days",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "init_profile",
+      "discriminator": [
+        210,
+        162,
+        212,
+        95,
+        95,
+        186,
+        89,
+        119
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": []
+    },
+    {
+      "name": "resolve_dispute",
+      "discriminator": [
+        231,
+        6,
+        202,
+        6,
+        96,
+        103,
+        12,
+        230
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true
+        },
+        {
+          "name": "client"
+        },
+        {
+          "name": "job",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  106,
+                  111,
+                  98
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "client"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "escrow_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "job"
+              }
+            ]
+          }
+        },
+        {
+          "name": "client_usdc_ata",
+          "writable": true
+        },
+        {
+          "name": "freelancer"
+        },
+        {
+          "name": "freelancer_usdc_ata",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "job_id",
+          "type": "u64"
+        },
+        {
+          "name": "client_amount",
+          "type": "u64"
+        },
+        {
+          "name": "freelancer_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "submit_work",
+      "discriminator": [
+        158,
+        80,
+        101,
+        51,
+        114,
+        130,
+        101,
+        253
+      ],
+      "accounts": [
+        {
+          "name": "freelancer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "client"
+        },
+        {
+          "name": "job",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  106,
+                  111,
+                  98
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "client"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "job_id",
+          "type": "u64"
+        },
+        {
+          "name": "work_description",
+          "type": "string"
+        }
+      ]
     }
   ],
   "accounts": [
     {
-      "name": "Escrow",
+      "name": "Job",
       "discriminator": [
-        31,
+        75,
+        124,
+        80,
+        203,
+        161,
+        180,
+        202,
+        80
+      ]
+    },
+    {
+      "name": "UserProfile",
+      "discriminator": [
+        32,
+        37,
+        119,
+        205,
+        179,
+        180,
+        13,
+        194
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "DeadlineExtended",
+      "discriminator": [
+        100,
+        53,
+        50,
+        91,
+        205,
+        71,
+        0,
+        103
+      ]
+    },
+    {
+      "name": "DisputeRaised",
+      "discriminator": [
+        246,
+        167,
+        109,
+        37,
+        142,
+        45,
+        38,
+        176
+      ]
+    },
+    {
+      "name": "DisputeResolved",
+      "discriminator": [
+        121,
+        64,
+        249,
+        153,
+        139,
+        128,
+        236,
+        187
+      ]
+    },
+    {
+      "name": "GraceClaimed",
+      "discriminator": [
+        220,
+        114,
+        60,
+        64,
+        40,
+        109,
+        220,
+        86
+      ]
+    },
+    {
+      "name": "JobAccepted",
+      "discriminator": [
+        47,
+        54,
+        152,
+        59,
+        118,
+        195,
+        251,
+        114
+      ]
+    },
+    {
+      "name": "JobApproved",
+      "discriminator": [
+        94,
+        107,
+        216,
+        63,
+        47,
+        197,
+        215,
+        133
+      ]
+    },
+    {
+      "name": "JobCancelled",
+      "discriminator": [
+        203,
+        84,
+        143,
+        130,
+        48,
+        134,
+        74,
+        191
+      ]
+    },
+    {
+      "name": "JobCreated",
+      "discriminator": [
+        48,
+        110,
+        162,
+        177,
+        67,
+        74,
+        159,
+        131
+      ]
+    },
+    {
+      "name": "JobExpired",
+      "discriminator": [
         213,
         123,
-        187,
-        186,
-        22,
-        218,
-        155
+        115,
+        173,
+        157,
+        242,
+        12,
+        71
+      ]
+    },
+    {
+      "name": "ProfileInitialized",
+      "discriminator": [
+        1,
+        31,
+        122,
+        19,
+        193,
+        205,
+        23,
+        27
+      ]
+    },
+    {
+      "name": "WorkSubmitted",
+      "discriminator": [
+        136,
+        185,
+        210,
+        174,
+        216,
+        140,
+        64,
+        125
       ]
     }
   ],
@@ -291,40 +1074,205 @@
     {
       "code": 6000,
       "name": "InvalidAmount",
-      "msg": "Amount must be greater than zero"
+      "msg": "Amount must be greater than zero."
     },
     {
       "code": 6001,
       "name": "TitleTooLong",
-      "msg": "Job title must be 64 characters or fewer"
+      "msg": "Job title is too long."
     },
     {
       "code": 6002,
       "name": "DescriptionTooLong",
-      "msg": "Job description must be 256 characters or fewer"
+      "msg": "Job description is too long."
     },
     {
       "code": 6003,
-      "name": "NotOpen",
-      "msg": "Escrow is not open"
+      "name": "WorkDescriptionTooLong",
+      "msg": "Work description is too long."
     },
     {
       "code": 6004,
-      "name": "NotInProgress",
-      "msg": "Escrow is not in progress"
+      "name": "DisputeReasonTooLong",
+      "msg": "Dispute reason is too long."
     },
     {
       "code": 6005,
+      "name": "InvalidUsdcMint",
+      "msg": "Invalid USDC mint for this environment."
+    },
+    {
+      "code": 6006,
       "name": "Unauthorized",
-      "msg": "Unauthorized action"
+      "msg": "Signer is not authorized for this action."
+    },
+    {
+      "code": 6007,
+      "name": "InvalidStatusTransition",
+      "msg": "Invalid status transition for this action."
+    },
+    {
+      "code": 6008,
+      "name": "JobAlreadyAccepted",
+      "msg": "Job was already accepted by a freelancer."
+    },
+    {
+      "code": 6009,
+      "name": "InvalidFreelancer",
+      "msg": "Provided freelancer does not match the job freelancer."
+    },
+    {
+      "code": 6010,
+      "name": "ClientMismatch",
+      "msg": "Client account does not match the job client."
+    },
+    {
+      "code": 6011,
+      "name": "InvalidTokenOwner",
+      "msg": "Token account owner is invalid."
+    },
+    {
+      "code": 6012,
+      "name": "InvalidTokenMint",
+      "msg": "Token account mint is invalid."
+    },
+    {
+      "code": 6013,
+      "name": "InvalidTreasuryAccount",
+      "msg": "Provided treasury token account is invalid."
+    },
+    {
+      "code": 6014,
+      "name": "JobIdMismatch",
+      "msg": "Provided job_id does not match the job account."
+    },
+    {
+      "code": 6015,
+      "name": "InvalidDeadlineExtension",
+      "msg": "New deadline must be greater than current expiry time."
+    },
+    {
+      "code": 6016,
+      "name": "JobNotExpiredYet",
+      "msg": "Job is not expired yet."
+    },
+    {
+      "code": 6017,
+      "name": "InvalidStatusForExpiry",
+      "msg": "Status does not allow expiry."
+    },
+    {
+      "code": 6018,
+      "name": "WorkNotSubmitted",
+      "msg": "Work has not been submitted yet."
+    },
+    {
+      "code": 6019,
+      "name": "GracePeriodNotElapsed",
+      "msg": "Grace period has not elapsed yet."
+    },
+    {
+      "code": 6020,
+      "name": "UnauthorizedResolver",
+      "msg": "Only treasury/admin resolver can resolve disputes."
+    },
+    {
+      "code": 6021,
+      "name": "InvalidDisputeSplit",
+      "msg": "Client and freelancer split must equal escrow amount."
+    },
+    {
+      "code": 6022,
+      "name": "MathOverflow",
+      "msg": "Math overflow."
     }
   ],
   "types": [
     {
-      "name": "Escrow",
+      "name": "DeadlineExtended",
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "job_id",
+            "type": "u64"
+          },
+          {
+            "name": "new_expiry",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DisputeRaised",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "job_id",
+            "type": "u64"
+          },
+          {
+            "name": "raised_by",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DisputeResolved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "job_id",
+            "type": "u64"
+          },
+          {
+            "name": "client_amount",
+            "type": "u64"
+          },
+          {
+            "name": "freelancer_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GraceClaimed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "job_id",
+            "type": "u64"
+          },
+          {
+            "name": "amount_released",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Job",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "title",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "type": "string"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
           {
             "name": "client",
             "type": "pubkey"
@@ -334,42 +1282,146 @@
             "type": "pubkey"
           },
           {
-            "name": "amount",
-            "type": "u64"
-          },
-          {
-            "name": "job_title",
-            "type": "string"
-          },
-          {
-            "name": "job_description",
-            "type": "string"
-          },
-          {
             "name": "status",
             "type": {
               "defined": {
-                "name": "EscrowStatus"
+                "name": "JobStatus"
               }
             }
           },
           {
-            "name": "bump",
+            "name": "milestone_approved",
+            "type": "bool"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "expiry_time",
+            "type": "i64"
+          },
+          {
+            "name": "grace_period",
+            "type": "i64"
+          },
+          {
+            "name": "submitted_at",
+            "type": "i64"
+          },
+          {
+            "name": "work_description",
+            "type": "string"
+          },
+          {
+            "name": "dispute_reason",
+            "type": "string"
+          },
+          {
+            "name": "job_id",
+            "type": "u64"
+          },
+          {
+            "name": "job_bump",
             "type": "u8"
           },
           {
             "name": "vault_bump",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "JobAccepted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "job_id",
+            "type": "u64"
           },
           {
-            "name": "created_at",
+            "name": "freelancer",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "JobApproved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "job_id",
+            "type": "u64"
+          },
+          {
+            "name": "amount_released",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "JobCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "job_id",
+            "type": "u64"
+          },
+          {
+            "name": "refund_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "JobCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "job_id",
+            "type": "u64"
+          },
+          {
+            "name": "client",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "expiry",
             "type": "i64"
           }
         ]
       }
     },
     {
-      "name": "EscrowStatus",
+      "name": "JobExpired",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "job_id",
+            "type": "u64"
+          },
+          {
+            "name": "refund_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "JobStatus",
       "type": {
         "kind": "enum",
         "variants": [
@@ -377,16 +1429,86 @@
             "name": "Open"
           },
           {
-            "name": "InProgress"
+            "name": "Active"
           },
           {
-            "name": "Completed"
+            "name": "PendingReview"
+          },
+          {
+            "name": "Complete"
           },
           {
             "name": "Disputed"
           },
           {
+            "name": "Expired"
+          },
+          {
             "name": "Cancelled"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProfileInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserProfile",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "jobs_completed",
+            "type": "u32"
+          },
+          {
+            "name": "jobs_posted",
+            "type": "u32"
+          },
+          {
+            "name": "disputes_raised",
+            "type": "u32"
+          },
+          {
+            "name": "total_earned",
+            "type": "u64"
+          },
+          {
+            "name": "total_spent",
+            "type": "u64"
+          },
+          {
+            "name": "member_since",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WorkSubmitted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "job_id",
+            "type": "u64"
+          },
+          {
+            "name": "freelancer",
+            "type": "pubkey"
           }
         ]
       }

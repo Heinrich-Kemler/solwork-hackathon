@@ -24,5 +24,5 @@ devnet-smoke = "yarn run ts-node tests/devnet-smoke.ts"
 
 [test.validator]
 bind_address = "127.0.0.1"
-rpc_port = 18999
-faucet_port = 19001
+rpc_port = 19999
+faucet_port = 20001

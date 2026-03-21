@@ -1,127 +1,112 @@
-# solwork
+# SolWork — Anchor Backend (Round 4)
 
-**Trustless milestone-based freelance escrow on Solana.**
+SolWork is a Solana devnet freelance escrow program using Anchor + SPL Token USDC escrow.
 
-> Upwork takes 20% and holds your money for days. We take 0% and release it in 400 milliseconds.
+## Program
 
-Client posts a job and locks SOL in a PDA vault. Freelancer accepts. Client approves the deliverable and SOL releases instantly on-chain. No middlemen, no trust required.
+- Program ID: `3HP12EX32vPRnocDfy1SqRpFZSJUnyWkCDPGarhn9CGj`
+- Cluster: `devnet`
+- Devnet USDC mint (enforced outside local-testing): `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`
+- Treasury wallet constant: `Fg6PaFpoGXkYsidMpWxTWqkYMdL4C9dQW9i7RkQ4xkfj`
 
-## How It Works
+## PDA Design
 
-1. **Post Job** — Client creates an escrow with a title, description, and SOL amount. Funds are locked in a program-derived vault.
-2. **Accept** — A freelancer reviews the listing and accepts the job.
-3. **Deliver** — Freelancer completes the work off-chain.
-4. **Approve & Release** — Client approves and SOL transfers to the freelancer instantly. Or raises a dispute.
+- `job`: seeds `[b"job", client, job_id_le]`
+- `escrow_vault`: seeds `[b"vault", job]` (token authority = `job` PDA)
 
-## Tech Stack
+This supports multiple concurrent jobs per client as long as `job_id` differs.
 
-| Layer | Technology |
-|-------|-----------|
-| Smart Contract | Rust + Anchor 0.32 |
-| Blockchain | Solana (devnet) |
-| Frontend | Next.js 16 + TypeScript |
-| Styling | Tailwind CSS 4 |
-| Wallet | Solana Wallet Adapter (Phantom, Solflare) |
-| Cross-Chain | LI.FI bridge integration |
-| Package Manager | pnpm |
+## Instructions (IDL Surface)
 
-## Project Structure
+- `init_profile()`
+- `create_job(job_id: u64, title: string, description: string, amount: u64)`
+- `accept_job(job_id: u64)`
+- `submit_work(job_id: u64, work_description: string)`
+- `extend_deadline(job_id: u64, extra_days: u64)` (max 30 days per call, Active only, client only)
+- `partial_release(job_id: u64, amount: u64)` (client-only tranche release; Active/PendingReview)
+- `approve_job(job_id: u64)` (release remaining vault balance, 99% freelancer / 1% treasury)
+- `claim_after_grace(job_id: u64)` (auto-release if client ghosts during review window)
+- `dispute_job(job_id: u64, dispute_reason: string)`
+- `resolve_dispute(job_id: u64, client_amount: u64, freelancer_amount: u64)` (treasury/admin resolver)
+- `cancel_job(job_id: u64)` (Open only, client refund)
+- `expire_job(job_id: u64)` (permissionless, refunds client on expired Open/Active jobs)
 
-```
-solwork/
-  programs/solwork/src/
-    lib.rs                    # Anchor escrow program (5 instructions)
-  app/                        # Next.js frontend
-    src/
-      app/
-        page.tsx              # Landing page
-        jobs/page.tsx          # Job board with filters
-        jobs/[id]/page.tsx     # Job detail + actions
-        post/page.tsx          # Post a job form
-        layout.tsx             # Root layout (wallet + toast providers)
-        globals.css            # Dark theme styles
-      components/
-        WalletProvider.tsx     # Solana wallet context (devnet)
-        Navbar.tsx             # Navigation + wallet connect
-        CreateEscrow.tsx       # Job posting form (wired to on-chain)
-        EscrowCard.tsx         # Escrow card with role-based actions
-        TxToast.tsx            # Transaction notifications + explorer links
-      lib/
-        anchor.ts              # Anchor client, PDA helpers, tx wrappers
-        useEscrows.ts          # React hooks for fetching escrows
-        idl.json               # Generated program IDL
-  tests/                       # Anchor integration tests
-  target/idl/                  # Generated IDL from anchor build
-  Anchor.toml                  # Anchor config (devnet)
-```
+## Job Status
 
-## Program Instructions
+`Open | Active | PendingReview | Complete | Disputed | Expired | Cancelled`
 
-| Instruction | Signer | Description |
-|------------|--------|-------------|
-| `create_escrow` | Client | Lock SOL and create a job listing |
-| `accept_job` | Freelancer | Accept an open escrow |
-| `approve_and_release` | Client | Approve work and release SOL to freelancer |
-| `raise_dispute` | Client | Flag the escrow as disputed |
-| `cancel_escrow` | Client | Cancel an open escrow and reclaim SOL |
+## Core Account Fields
 
-## Demo Flow
+`Job` includes:
 
-1. Open the app and connect your Phantom/Solflare wallet (set to devnet)
-2. Click **Post a Job** in the navbar
-3. Fill in a job title, description, and SOL amount
-4. Click **Lock SOL & Post Job** — approve the transaction in your wallet
-5. Navigate to **Jobs** to see your posted escrow
-6. From a different wallet, click **Accept Job** on an open listing
-7. As the client, click **Approve & Release SOL** to pay the freelancer instantly
-8. Click the explorer link in the toast notification to verify on-chain
+- escrow/job metadata: `job_id`, `amount`, `client`, `freelancer`, `status`
+- milestone/lifecycle: `milestone_approved`, `created_at`, `expiry_time`, `submitted_at`
+- workflow text fields: `title`, `description`, `work_description` (max 512), `dispute_reason` (max 256)
+- config: `grace_period`, `job_bump`, `vault_bump`
 
-## Prerequisites
+`UserProfile` includes:
 
-- Rust (via rustup)
-- Solana CLI
-- Anchor CLI via AVM
-- Node.js 18+
-- pnpm
+- `owner`
+- `jobs_completed`
+- `jobs_posted`
+- `disputes_raised`
+- `total_earned`
+- `total_spent`
+- `member_since`
 
-## Getting Started
+## Events (for Frontend Indexing)
+
+- `ProfileInitialized`
+- `JobCreated`
+- `JobAccepted`
+- `WorkSubmitted`
+- `PartialRelease`
+- `JobApproved`
+- `DisputeRaised`
+- `JobCancelled`
+- `JobExpired`
+- `DeadlineExtended`
+- `GraceClaimed`
+- `DisputeResolved`
+
+## Local Verification
 
 ```bash
-# 1. Build the Anchor program
-cd solwork
 anchor build
-
-# 2. Start the frontend
-cd app
-pnpm install
-pnpm dev
+anchor test -- --features local-testing
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Local suite coverage includes:
 
-### Get devnet SOL
+- concurrent 3-job PDA uniqueness for one client
+- submit -> approve happy path
+- partial release from Active with remaining release via approve shortcut
+- partial release from PendingReview and final tranche completion
+- grace-period auto-release
+- expiry refund for Open and Active
+- treasury 1% fee split
+- profile/reputation increments
+- deadline extension limits
+- partial dispute split resolution
+
+## Devnet Verification
 
 ```bash
-solana config set --url devnet
-solana airdrop 2
+anchor deploy --provider.cluster devnet
 ```
 
-Or use [faucet.solana.com](https://faucet.solana.com)
+Optional smoke flow:
 
-## Roadmap
+```bash
+ANCHOR_PROVIDER_URL=https://api.devnet.solana.com \
+ANCHOR_WALLET=test-ledger/test-wallet.json \
+SOLWORK_PROGRAM_ID=3HP12EX32vPRnocDfy1SqRpFZSJUnyWkCDPGarhn9CGj \
+yarn run ts-node tests/devnet-smoke.ts
+```
 
-- [x] Trustless escrow smart contract (Anchor)
-- [x] Frontend with wallet connect and on-chain transactions
-- [x] Job board with status filters
-- [x] Role-based actions (client vs freelancer)
-- [x] Transaction notifications with explorer links
-- [ ] Cross-chain deposits via LI.FI widget (in progress)
-- [ ] Multi-milestone escrow support
-- [ ] On-chain dispute resolution with third-party arbiter
-- [ ] Reputation system (on-chain reviews)
-- [ ] USDC support via SPL token escrow
-- [ ] Deploy to mainnet-beta
+## Artifacts
 
-## License
-
-MIT
+- IDL: `target/idl/solwork.json`
+- Program source: `programs/solwork/src/lib.rs`
+- Local integration runner: `tests/local-runner.ts`
+- Devnet smoke script: `tests/devnet-smoke.ts`

@@ -32,3 +32,19 @@
   Prevention rule: add explicit RPC readiness checks and retry wrappers for localnet airdrops in test scripts.
 - 2026-03-21: Mistake pattern: local faucet requests still failed with RPC internal errors in this environment.
   Prevention rule: for deterministic local tests, fund test signers via `SystemProgram.transfer` from the provider wallet instead of relying on `requestAirdrop`.
+- 2026-03-21: Mistake pattern: devnet smoke flow depended on `requestAirdrop`, which can stall or fail under faucet limits.
+  Prevention rule: fund temporary smoke-test signers with direct SOL transfer from the funded deploy wallet.
+- 2026-03-21: Mistake pattern: used outdated `new Program(idl, programId, provider)` construction under Anchor v0.32 TypeScript APIs.
+  Prevention rule: load IDL from `target/idl`, set `idl.address`, and instantiate with `new Program(idl, provider)` for version-safe scripts.
+- 2026-03-21: Mistake pattern: time-based local tests relied on long default windows and wall-clock sleeps without enough validator time drift.
+  Prevention rule: keep `local-testing` time constants minimal (for example 1s) so expiry/grace assertions are deterministic in CI-like environments.
+- 2026-03-21: Mistake pattern: expiry refund assertions compared final client balance to pre-create balance, ignoring the initial escrow debit.
+  Prevention rule: for refund paths, assert net-zero loss against the pre-create baseline or compare refund delta from post-lock balance.
+- 2026-03-21: Mistake pattern: interpreted Anchor's "configured rpc port is already in use" literally when sandbox actually blocked validator port binding.
+  Prevention rule: if local validator fails with port errors in sandboxed runs, confirm with a direct validator launch and rerun `anchor test` with elevated permissions before changing test network config.
+- 2026-03-21: Mistake pattern: assumed `anchor deploy` would always resize and upload a larger IDL account; deploy upgraded the program but IDL upload failed (`RequireGteViolated`) when new IDL exceeded previous account capacity.
+  Prevention rule: after adding instructions/events that grow the IDL, be ready to `anchor idl close` + `anchor idl init --filepath target/idl/<program>.json <program_id>` on devnet when IDL set-buffer fails due size.
+- 2026-03-21: Mistake pattern: used strict `Program<Idl>` typing in one-off TS scripts and hit missing typed account namespace (`program.account.userProfile`).
+  Prevention rule: for ad-hoc verification scripts, either import generated `Program<Solwork>` types or cast `program as any` to avoid blocking runtime checks on type-only friction.
+- 2026-03-21: Mistake pattern: treated `anchor test` (without features) as equivalent to local deterministic tests, but non-feature build enforces devnet USDC mint and fails against mock local mint.
+  Prevention rule: for this repo, run deterministic local suite with `anchor test -- --features local-testing`; reserve plain `anchor test` for scenarios using real devnet USDC mint/account setup.
