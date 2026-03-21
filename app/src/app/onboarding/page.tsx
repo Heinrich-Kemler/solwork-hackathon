@@ -6,6 +6,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useConnection, useAnchorWallet } from "@solana/wallet-adapter-react";
 import dynamic from "next/dynamic";
 import { Github, Twitter, Linkedin, Globe, Send } from "lucide-react";
+import AvatarUpload from "@/components/AvatarUpload";
 import {
   getProvider,
   getProgram,
@@ -120,25 +121,17 @@ export default function OnboardingPage() {
       </div>
 
       <div className="card-static p-6 space-y-5">
-        {/* Avatar preview */}
+        {/* Avatar upload */}
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold shrink-0 overflow-hidden" style={{ background: 'var(--accent-subtle)', border: '2px solid var(--border)', color: 'var(--accent)' }}>
-            {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-            ) : (
-              publicKey!.toBase58().slice(0, 2).toUpperCase()
-            )}
-          </div>
-          <div className="flex-1">
-            <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Profile picture URL (optional)</label>
-            <input
-              type="url"
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-              placeholder="https://..."
-              className="input w-full px-3 py-1.5 text-sm"
-            />
+          <AvatarUpload
+            value={avatarUrl}
+            fallback={publicKey ? publicKey.toBase58().slice(0, 2).toUpperCase() : "??"}
+            onChange={setAvatarUrl}
+            size={64}
+          />
+          <div>
+            <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Profile picture</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Click to upload (max 2MB)</p>
           </div>
         </div>
 

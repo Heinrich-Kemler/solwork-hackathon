@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Github, Twitter, Linkedin, Globe, Send, X } from "lucide-react";
 import type { LocalProfile } from "@/lib/useLocalProfile";
+import AvatarUpload from "./AvatarUpload";
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -99,9 +100,17 @@ export default function EditProfileModal({
           </div>
 
           {/* Avatar */}
-          <div>
-            <label className="block text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Profile picture URL</label>
-            <input type="url" value={avatar} onChange={(e) => setAvatar(e.target.value)} placeholder="https://..." className="input w-full px-3 py-1.5 text-sm" />
+          <div className="flex items-center gap-4">
+            <AvatarUpload
+              value={avatar}
+              fallback={username.slice(0, 2).toUpperCase() || "??"}
+              onChange={setAvatar}
+              size={64}
+            />
+            <div>
+              <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Profile picture</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Click to upload (max 2MB)</p>
+            </div>
           </div>
 
           {/* Name */}
