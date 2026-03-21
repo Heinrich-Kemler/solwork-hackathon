@@ -39,24 +39,37 @@ export default function LeaderboardPage() {
       const provider = getProvider(connection, wallet);
       const program = getProgram(provider);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const accounts = await (program.account as any).userProfile.all();
-
+      // Fetch raw accounts and decode manually to skip stale profiles
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const parsed: LeaderboardEntry[] = accounts.map((acc: any) => {
-        const walletAddr = acc.account.owner.toBase58();
-        const earned = (acc.account.totalEarned as BN).toNumber() / 1_000_000;
-        const completed = acc.account.jobsCompleted as number;
-        const disputes = acc.account.disputesRaised as number;
-        const lp = getLocalProfileForWallet(walletAddr);
-        return {
-          wallet: walletAddr,
-          jobsCompleted: completed,
-          totalEarned: earned,
-          disputesRaised: disputes,
-          reputation: calcReputation(completed, earned, disputes),
-          displayName: lp.username || walletAddr.slice(0, 8),
-        };
+      const coder = (program as any).coder.accounts;
+      const discriminator = coder.memcmp("userProfile").bytes;
+      const rawAccounts = await connection.getProgramAccounts(PROGRAM_ID, {
+        filters: [{ memcmp: { offset: 0, bytes: discriminator } }],
       });
+
+      const parsed: LeaderboardEntry[] = [];
+      for (const raw of rawAccounts) {
+        try {
+          const acc = coder.decode("userProfile", raw.account.data);
+          const walletAddr = acc.owner.toBase58();
+          const earned = (acc.totalEarned as BN).toNumber() / 1_000_000;
+          const completed = acc.jobsCompleted as number;
+          const disputes = acc.disputesRaised as number;
+          const repScore = (acc.reputationScore as BN)?.toNumber?.() ?? acc.reputationScore ?? 0;
+          const lp = getLocalProfileForWallet(walletAddr);
+          parsed.push({
+            wallet: walletAddr,
+            jobsCompleted: completed,
+            totalEarned: earned,
+            disputesRaised: disputes,
+            reputation: repScore || calcReputation(completed, earned, disputes),
+            displayName: lp.username || walletAddr.slice(0, 8),
+          });
+        } catch {
+          // Stale profile — skip
+          console.warn(`Skipping stale profile ${raw.pubkey.toBase58()}`);
+        }
+      }
 
       parsed.sort((a, b) => b.reputation - a.reputation);
       setEntries(parsed.slice(0, 50));

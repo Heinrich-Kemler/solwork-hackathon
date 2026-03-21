@@ -28,6 +28,7 @@ export default function EditProfileModal({
   const [skillInput, setSkillInput] = useState("");
   const [skills, setSkills] = useState<string[]>(profile.skills || []);
   const [available, setAvailable] = useState(profile.available || false);
+  const [email, setEmail] = useState(profile.email || "");
 
   // Sync state when profile changes
   useEffect(() => {
@@ -41,6 +42,7 @@ export default function EditProfileModal({
     setTelegram(profile.telegram);
     setSkills(profile.skills || []);
     setAvailable(profile.available || false);
+    setEmail(profile.email || "");
   }, [profile]);
 
   useEffect(() => {
@@ -75,6 +77,7 @@ export default function EditProfileModal({
       telegram: telegram.trim(),
       skills,
       available,
+      email: email.trim(),
     });
     onClose();
   };
@@ -153,6 +156,13 @@ export default function EditProfileModal({
             >
               <span className="absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform" style={{ left: available ? '22px' : '2px' }} />
             </button>
+          </div>
+
+          {/* Email for notifications */}
+          <div>
+            <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Email for notifications</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="input w-full px-3 py-1.5 text-sm" />
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Never shared. Used only for job notifications.</p>
           </div>
 
           {/* Social links */}

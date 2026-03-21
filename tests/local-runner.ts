@@ -44,6 +44,13 @@ function findProfilePda(programId: PublicKey, owner: PublicKey): PublicKey {
   )[0];
 }
 
+function findDisputeVotePda(programId: PublicKey, job: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("dispute_vote"), job.toBuffer()],
+    programId
+  )[0];
+}
+
 async function expectFailure(label: string, fn: () => Promise<unknown>): Promise<void> {
   let failed = false;
   try {
@@ -93,6 +100,7 @@ async function run(): Promise<void> {
 
   const freelancer = Keypair.generate();
   const altCaller = Keypair.generate();
+  const referrer = Keypair.generate();
 
   await provider.sendAndConfirm(
     new anchor.web3.Transaction().add(
@@ -104,6 +112,11 @@ async function run(): Promise<void> {
       SystemProgram.transfer({
         fromPubkey: wallet.publicKey,
         toPubkey: altCaller.publicKey,
+        lamports: 1_000_000_000,
+      }),
+      SystemProgram.transfer({
+        fromPubkey: wallet.publicKey,
+        toPubkey: referrer.publicKey,
         lamports: 1_000_000_000,
       })
     ),
@@ -119,6 +132,15 @@ async function run(): Promise<void> {
     )
   ).address;
 
+  const referrerUsdcAta = (
+    await getOrCreateAssociatedTokenAccount(
+      connection,
+      wallet.payer,
+      usdcMint,
+      referrer.publicKey
+    )
+  ).address;
+
   await mintTo(
     connection,
     wallet.payer,
@@ -130,6 +152,7 @@ async function run(): Promise<void> {
 
   const clientProfile = findProfilePda(program.programId, wallet.publicKey);
   const freelancerProfile = findProfilePda(program.programId, freelancer.publicKey);
+  const referrerProfile = findProfilePda(program.programId, referrer.publicKey);
   await program.methods
     .initProfile()
     .accounts({
@@ -144,6 +167,24 @@ async function run(): Promise<void> {
       signer: freelancer.publicKey,
       profile: freelancerProfile,
       systemProgram: SystemProgram.programId,
+    } as any)
+    .signers([freelancer])
+    .rpc();
+  await program.methods
+    .initProfile()
+    .accounts({
+      signer: referrer.publicKey,
+      profile: referrerProfile,
+      systemProgram: SystemProgram.programId,
+    } as any)
+    .signers([referrer])
+    .rpc();
+  await program.methods
+    .setReferral(referrer.publicKey)
+    .accounts({
+      signer: freelancer.publicKey,
+      profile: freelancerProfile,
+      referrerProfile,
     } as any)
     .signers([freelancer])
     .rpc();
@@ -200,6 +241,7 @@ async function run(): Promise<void> {
 
   const freelancerBeforeHappy = (await getAccount(connection, freelancerUsdcAta)).amount;
   const treasuryBeforeHappy = (await getAccount(connection, treasuryUsdcAta)).amount;
+  const referrerBeforeHappy = (await getAccount(connection, referrerUsdcAta)).amount;
 
   await program.methods
     .createJob(jobIdHappy, "Round2 Happy", "submit then approve", amountHappy)
@@ -244,6 +286,8 @@ async function run(): Promise<void> {
       treasuryUsdcAta,
       clientProfile,
       freelancerProfile,
+      referrerProfile,
+      referrerUsdcAta,
       tokenProgram: TOKEN_PROGRAM_ID,
     } as any)
     .rpc();
@@ -251,18 +295,22 @@ async function run(): Promise<void> {
   const happyJobData = await program.account.job.fetch(happyJob);
   const freelancerAfterHappy = (await getAccount(connection, freelancerUsdcAta)).amount;
   const treasuryAfterHappy = (await getAccount(connection, treasuryUsdcAta)).amount;
+  const referrerAfterHappy = (await getAccount(connection, referrerUsdcAta)).amount;
   const happyVaultAfter = (await getAccount(connection, happyVault)).amount;
   const feeHappy = BigInt(amountHappy.toString()) / BigInt(100);
-  const freelancerExpectedHappy = BigInt(amountHappy.toString()) - feeHappy;
+  const referralHappy = BigInt(amountHappy.toString()) / BigInt(200);
+  const freelancerExpectedHappy = BigInt(amountHappy.toString()) - feeHappy - referralHappy;
   assert.equal(statusKey(happyJobData.status), "complete");
   assert.equal(statusKey(happyJobData.status), "complete");
   assert.equal(happyJobData.milestoneApproved, true);
   assert.equal(happyVaultAfter, BigInt(0));
   assert.equal(freelancerAfterHappy - freelancerBeforeHappy, freelancerExpectedHappy);
   assert.equal(treasuryAfterHappy - treasuryBeforeHappy, feeHappy);
+  assert.equal(referrerAfterHappy - referrerBeforeHappy, referralHappy);
 
   const clientProfileAfterHappy = await program.account.userProfile.fetch(clientProfile);
   const freelancerProfileAfterHappy = await program.account.userProfile.fetch(freelancerProfile);
+  const referrerProfileAfterHappy = await program.account.userProfile.fetch(referrerProfile);
   assert.equal(clientProfileAfterHappy.jobsPosted, 1);
   assert.equal(
     clientProfileAfterHappy.totalSpent.toString(),
@@ -274,6 +322,11 @@ async function run(): Promise<void> {
     freelancerProfileAfterHappy.totalEarned.toString(),
     freelancerExpectedHappy.toString(),
     "freelancer total_earned mismatch"
+  );
+  assert.equal(
+    referrerProfileAfterHappy.referralEarnings.toString(),
+    referralHappy.toString(),
+    "referrer referral_earnings mismatch"
   );
 
   // 1.1) Tranche release from Active, then approve shortcut releases all remaining.
@@ -289,6 +342,7 @@ async function run(): Promise<void> {
   const activeTrancheOne = new anchor.BN(300_000);
   const freelancerBeforeTrancheActive = (await getAccount(connection, freelancerUsdcAta)).amount;
   const treasuryBeforeTrancheActive = (await getAccount(connection, treasuryUsdcAta)).amount;
+  const referrerBeforeTrancheActive = (await getAccount(connection, referrerUsdcAta)).amount;
 
   await program.methods
     .createJob(
@@ -352,6 +406,8 @@ async function run(): Promise<void> {
       treasuryUsdcAta,
       clientProfile,
       freelancerProfile,
+      referrerProfile,
+      referrerUsdcAta,
       tokenProgram: TOKEN_PROGRAM_ID,
     } as any)
     .rpc();
@@ -360,10 +416,12 @@ async function run(): Promise<void> {
   const trancheActiveVaultAfterApprove = (await getAccount(connection, trancheActiveVault)).amount;
   const freelancerAfterTrancheActive = (await getAccount(connection, freelancerUsdcAta)).amount;
   const treasuryAfterTrancheActive = (await getAccount(connection, treasuryUsdcAta)).amount;
+  const referrerAfterTrancheActive = (await getAccount(connection, referrerUsdcAta)).amount;
   const remainingBeforeApprove =
     BigInt(amountTrancheActive.toString()) - BigInt(activeTrancheOne.toString());
   const approveFee = remainingBeforeApprove / BigInt(100);
-  const approveFreelancerShare = remainingBeforeApprove - approveFee;
+  const approveReferral = remainingBeforeApprove / BigInt(200);
+  const approveFreelancerShare = remainingBeforeApprove - approveFee - approveReferral;
   assert.equal(statusKey(trancheActiveAfterApprove.status), "complete");
   assert.equal(trancheActiveAfterApprove.milestoneApproved, true);
   assert.equal(trancheActiveVaultAfterApprove, BigInt(0));
@@ -372,6 +430,7 @@ async function run(): Promise<void> {
     BigInt(activeTrancheOne.toString()) + approveFreelancerShare
   );
   assert.equal(treasuryAfterTrancheActive - treasuryBeforeTrancheActive, approveFee);
+  assert.equal(referrerAfterTrancheActive - referrerBeforeTrancheActive, approveReferral);
 
   // 1.2) Partial release from PendingReview, then final tranche completes when vault hits zero.
   const jobIdTranchePending = new anchor.BN(10_008);
@@ -583,6 +642,10 @@ async function run(): Promise<void> {
       usdcMint,
       escrowVault: graceVault,
       freelancerUsdcAta,
+      treasuryUsdcAta,
+      freelancerProfile,
+      referrerProfile,
+      referrerUsdcAta,
       tokenProgram: TOKEN_PROGRAM_ID,
     } as any)
     .signers([freelancer])
@@ -591,10 +654,14 @@ async function run(): Promise<void> {
   const graceJobData = await program.account.job.fetch(graceJob);
   const freelancerAfterGrace = (await getAccount(connection, freelancerUsdcAta)).amount;
   assert.equal(statusKey(graceJobData.status), "complete");
+  const graceFee = BigInt(amountGrace.toString()) / BigInt(100);
+  const graceReferral = BigInt(amountGrace.toString()) / BigInt(200);
+  const graceFreelancerExpected =
+    BigInt(amountGrace.toString()) - graceFee - graceReferral;
   assert.equal(
     freelancerAfterGrace - freelancerBeforeGrace,
-    BigInt(amountGrace.toString()),
-    "grace release did not pay full amount"
+    graceFreelancerExpected,
+    "grace release payout mismatch"
   );
 
   // 3) Expiry refund on Open job
@@ -709,13 +776,19 @@ async function run(): Promise<void> {
     "active expiry should leave client net balance unchanged"
   );
 
-  // 5) Dispute raises actor dispute count, then partial dispute resolution split.
+  // 5) Dispute DAO voting: dispute auto-inits jurors, jurors vote, and funds resolve by majority.
   const jobIdDispute = new anchor.BN(10_005);
   const amountDispute = new anchor.BN(400_000);
   const [disputeJob, disputeVault] = [
     findJobPda(program.programId, wallet.publicKey, jobIdDispute),
     findVaultPda(program.programId, findJobPda(program.programId, wallet.publicKey, jobIdDispute)),
   ];
+  const disputeVote = findDisputeVotePda(program.programId, disputeJob);
+  const jurorCandidates = [clientProfile, freelancerProfile, referrerProfile].map((pubkey) => ({
+    pubkey,
+    isSigner: false,
+    isWritable: false,
+  }));
 
   await program.methods
     .createJob(jobIdDispute, "Dispute", "record dispute profile stat", amountDispute)
@@ -741,6 +814,16 @@ async function run(): Promise<void> {
     .rpc();
   const clientBeforeResolve = (await getAccount(connection, clientUsdcAta)).amount;
   const freelancerBeforeResolve = (await getAccount(connection, freelancerUsdcAta)).amount;
+  const freelancerProfileBeforeDispute = await program.account.userProfile.fetch(freelancerProfile);
+  const clientProfileBeforeDispute = await program.account.userProfile.fetch(clientProfile);
+
+  // View helper path: call juror eligibility instruction (frontend can parse return data).
+  await program.methods
+    .getEligibleJurors()
+    .accounts({} as any)
+    .remainingAccounts(jurorCandidates)
+    .rpc();
+
   await program.methods
     .disputeJob(jobIdDispute, "Missing deliverable")
     .accounts({
@@ -748,51 +831,83 @@ async function run(): Promise<void> {
       client: wallet.publicKey,
       job: disputeJob,
       actorProfile: freelancerProfile,
+      disputeVote,
+      systemProgram: SystemProgram.programId,
     } as any)
+    .remainingAccounts(jurorCandidates)
     .signers([freelancer])
     .rpc();
 
   const disputeJobData = await program.account.job.fetch(disputeJob);
+  const disputeVoteData = await program.account.disputeVote.fetch(disputeVote);
   const freelancerProfileAfterDispute = await program.account.userProfile.fetch(freelancerProfile);
   assert.equal(statusKey(disputeJobData.status), "disputed");
-  assert.equal(freelancerProfileAfterDispute.disputesRaised, 1);
+  assert.equal(
+    freelancerProfileAfterDispute.disputesRaised,
+    freelancerProfileBeforeDispute.disputesRaised + 1
+  );
 
-  const clientSplit = new anchor.BN(120_000);
-  const freelancerSplit = new anchor.BN(280_000);
-  await program.methods
-    .resolveDispute(jobIdDispute, clientSplit, freelancerSplit)
-    .accounts({
-      admin: wallet.publicKey,
-      client: wallet.publicKey,
-      job: disputeJob,
-      usdcMint,
-      escrowVault: disputeVault,
-      clientUsdcAta,
-      freelancer: freelancer.publicKey,
-      freelancerUsdcAta,
-      tokenProgram: TOKEN_PROGRAM_ID,
-    } as any)
-    .rpc();
+  const signerMap = new Map<string, Keypair | null>([
+    [wallet.publicKey.toBase58(), null],
+    [freelancer.publicKey.toBase58(), freelancer],
+    [referrer.publicKey.toBase58(), referrer],
+  ]);
+  const firstTwoJurors = [disputeVoteData.juror1, disputeVoteData.juror2];
+  for (const juror of firstTwoJurors) {
+    const signer = signerMap.get(juror.toBase58());
+    assert.notEqual(signer, undefined, `missing signer for juror ${juror.toBase58()}`);
+    const voteCall = program.methods
+      .castVote(jobIdDispute, true)
+      .accounts({
+        voter: juror,
+        client: wallet.publicKey,
+        job: disputeJob,
+        disputeVote,
+        usdcMint,
+        escrowVault: disputeVault,
+        clientUsdcAta,
+        freelancer: freelancer.publicKey,
+        freelancerUsdcAta,
+        clientProfile,
+        freelancerProfile,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      } as any);
+    if (signer) {
+      await voteCall.signers([signer]).rpc();
+    } else {
+      await voteCall.rpc();
+    }
+  }
 
   const disputeAfterResolve = await program.account.job.fetch(disputeJob);
   const disputeVaultAfter = (await getAccount(connection, disputeVault)).amount;
   const clientAfterResolve = (await getAccount(connection, clientUsdcAta)).amount;
   const freelancerAfterResolve = (await getAccount(connection, freelancerUsdcAta)).amount;
+  const clientProfileAfterResolve = await program.account.userProfile.fetch(clientProfile);
+  const freelancerProfileAfterResolve = await program.account.userProfile.fetch(freelancerProfile);
   assert.equal(statusKey(disputeAfterResolve.status), "complete");
   assert.equal(disputeVaultAfter, BigInt(0));
   assert.equal(
     clientAfterResolve - clientBeforeResolve,
-    BigInt(clientSplit.toString()),
-    "client did not receive expected dispute split amount"
+    BigInt(0),
+    "client should not receive funds when freelancer wins vote"
   );
   assert.equal(
     freelancerAfterResolve - freelancerBeforeResolve,
-    BigInt(freelancerSplit.toString()),
-    "freelancer did not receive expected dispute split amount"
+    BigInt(amountDispute.toString()),
+    "freelancer should receive full disputed vault amount"
+  );
+  assert.equal(
+    clientProfileAfterResolve.reputationScore.toNumber(),
+    clientProfileBeforeDispute.reputationScore.toNumber() - 2
+  );
+  assert.equal(
+    freelancerProfileAfterResolve.reputationScore.toNumber(),
+    freelancerProfileBeforeDispute.reputationScore.toNumber() + 5
   );
 
   console.log(
-    "Local integration runner passed: concurrent PDA uniqueness, tranche release flow, deadline extension limits, dispute split resolution, and prior regressions."
+    "Local integration runner passed: concurrent PDA uniqueness, tranche release flow, deadline extension limits, dispute DAO vote resolution, referral payouts, and prior regressions."
   );
 }
 

@@ -13,6 +13,7 @@ export interface LocalProfile {
   avatar: string;
   skills: string[];
   available: boolean;
+  email: string;
 }
 
 const STORAGE_KEY = "solwork-local-profile";
@@ -28,6 +29,7 @@ const EMPTY: LocalProfile = {
   avatar: "",
   skills: [],
   available: false,
+  email: "",
 };
 
 /** Calculate profile completeness (0-100) */

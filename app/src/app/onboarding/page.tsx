@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useConnection, useAnchorWallet } from "@solana/wallet-adapter-react";
@@ -10,6 +10,7 @@ import {
   getProvider,
   getProgram,
   txInitProfile,
+  txSetReferral,
 } from "@/lib/anchor";
 import { useLocalProfile, type LocalProfile } from "@/lib/useLocalProfile";
 import { useProfile } from "@/lib/useProfile";
@@ -40,6 +41,7 @@ export default function OnboardingPage() {
   const [linkedin, setLinkedin] = useState("");
   const [website, setWebsite] = useState("");
   const [telegram, setTelegram] = useState("");
+  const [referrer, setReferrer] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (skip = false) => {
@@ -58,6 +60,7 @@ export default function OnboardingPage() {
         avatar: skip ? "" : avatarUrl.trim(),
         skills: [],
         available: false,
+        email: "",
       };
       saveProfile(localData);
 
@@ -65,6 +68,20 @@ export default function OnboardingPage() {
       const program = getProgram(provider);
       const tx = await txInitProfile(program, wallet.publicKey);
       showToast("Profile created on-chain!", "success", tx);
+
+      // Set referral if provided
+      if (!skip && referrer.trim()) {
+        try {
+          const { PublicKey } = await import("@solana/web3.js");
+          const referrerPubkey = new PublicKey(referrer.trim());
+          await txSetReferral(program, wallet.publicKey, referrerPubkey);
+          showToast("Referral set!", "info");
+        } catch {
+          // Referral is optional — don't block profile creation
+          console.warn("Failed to set referral");
+        }
+      }
+
       await refreshProfile();
       setTimeout(() => router.push("/jobs"), 1500);
     } catch (err) {
@@ -76,6 +93,11 @@ export default function OnboardingPage() {
     }
   };
 
+  // Redirect via useEffect — must be before any early returns (Rules of Hooks)
+  useEffect(() => {
+    if (connected && exists) router.push("/jobs");
+  }, [connected, exists, router]);
+
   if (!connected) {
     return (
       <div className="max-w-md mx-auto px-6 py-20 text-center space-y-6">
@@ -86,10 +108,7 @@ export default function OnboardingPage() {
     );
   }
 
-  if (exists) {
-    router.push("/jobs");
-    return null;
-  }
+  if (exists) return null;
 
   return (
     <div className="max-w-[560px] mx-auto px-6 py-12 space-y-6">
@@ -181,6 +200,19 @@ export default function OnboardingPage() {
             <Send size={16} style={{ color: 'var(--text-muted)' }} className="shrink-0" />
             <input type="text" value={telegram} onChange={(e) => setTelegram(e.target.value)} placeholder="@telegram" className="input flex-1 px-3 py-1.5 text-sm" />
           </div>
+        </div>
+
+        {/* Referral */}
+        <div>
+          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Referred by (optional)</label>
+          <input
+            type="text"
+            value={referrer}
+            onChange={(e) => setReferrer(e.target.value)}
+            placeholder="Wallet address or .sol name"
+            className="input w-full px-3 py-1.5 text-sm"
+          />
+          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Your referrer earns a share of platform fees</p>
         </div>
       </div>
 

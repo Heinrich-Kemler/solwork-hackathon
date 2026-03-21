@@ -53,7 +53,7 @@ export default function ProfilePage() {
   const { connection } = useConnection();
   const wallet = useAnchorWallet();
   const { showToast } = useToast();
-  const { profile, loading: profileLoading, exists, refresh: refreshProfile } = useProfile();
+  const { profile, loading: profileLoading, exists, needsRecreate, refresh: refreshProfile } = useProfile();
   const { jobs } = useJobs();
   const { balance } = useUsdcBalance();
   const { transactions, loading: txLoading } = useTxHistory(10);
@@ -214,9 +214,9 @@ export default function ProfilePage() {
         </div>
       ) : (
         <div className="card-static p-6 text-center space-y-3">
-          <p style={{ color: 'var(--text-secondary)' }}>No on-chain profile found.</p>
+          <p style={{ color: 'var(--text-secondary)' }}>{needsRecreate ? "Your profile needs to be updated. Please recreate it." : "No on-chain profile found."}</p>
           <button onClick={handleInitProfile} disabled={initLoading} className="btn-primary px-6 py-2.5">
-            {initLoading ? "Creating..." : "Create Profile"}
+            {initLoading ? "Creating..." : needsRecreate ? "Recreate Profile" : "Create Profile"}
           </button>
         </div>
       )}

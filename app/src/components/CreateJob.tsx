@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BN } from "@coral-xyz/anchor";
+import { X } from "lucide-react";
 import { useConnection, useAnchorWallet } from "@solana/wallet-adapter-react";
 import {
   getProvider,
@@ -12,6 +13,7 @@ import {
 import { useToast } from "./TxToast";
 import { useUsdcBalance } from "@/lib/useUsdcBalance";
 import TopUpModal from "./TopUpModal";
+import { JOB_CATEGORIES, encodeJobMeta, type JobCategory } from "@/lib/categories";
 
 export default function CreateJob({
   onCreated,
@@ -25,12 +27,23 @@ export default function CreateJob({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState<JobCategory | "">("");
+  const [skillInput, setSkillInput] = useState("");
+  const [skills, setSkills] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [showTopUp, setShowTopUp] = useState(false);
 
   const parsedAmount = parseFloat(amount) || 0;
   const insufficientFunds = parsedAmount > 0 && parsedAmount > balance;
   const shortfall = parsedAmount - balance;
+
+  const addSkill = () => {
+    const s = skillInput.trim();
+    if (s && !skills.includes(s) && skills.length < 8) {
+      setSkills([...skills, s]);
+      setSkillInput("");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,12 +61,18 @@ export default function CreateJob({
       const amountSmallest = usdcToSmallest(parsedAmount);
       const jobId = new BN(Date.now());
 
+      // Encode category + skills into description
+      const fullDescription = encodeJobMeta(description, {
+        category: category || "",
+        skills,
+      });
+
       const tx = await txCreateJob(
         program,
         wallet.publicKey,
         jobId,
         title,
-        description,
+        fullDescription,
         amountSmallest
       );
 
@@ -61,6 +80,8 @@ export default function CreateJob({
       setTitle("");
       setDescription("");
       setAmount("");
+      setCategory("");
+      setSkills([]);
       onCreated?.();
     } catch (err) {
       console.error("Failed to create job:", err);
@@ -74,116 +95,76 @@ export default function CreateJob({
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-4 max-w-lg">
-        <h2 className="text-xl font-bold text-white">Post a Job</h2>
+        <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Post a Job</h2>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Job Title</label>
-          <input
-            type="text"
-            maxLength={64}
-            required
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Build a landing page"
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
+          <label className="block text-sm mb-1" style={{ color: 'var(--text-muted)' }}>Job Title</label>
+          <input type="text" maxLength={64} required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Build a landing page" className="input w-full px-3 py-2" />
+        </div>
+
+        {/* Category */}
+        <div>
+          <label className="block text-sm mb-1" style={{ color: 'var(--text-muted)' }}>Category</label>
+          <select value={category} onChange={(e) => setCategory(e.target.value as JobCategory)} className="input w-full px-3 py-2">
+            <option value="">Select category...</option>
+            {JOB_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-1">
-            Description
-          </label>
-          <textarea
-            maxLength={256}
-            required
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe the deliverables..."
-            rows={3}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
+          <label className="block text-sm mb-1" style={{ color: 'var(--text-muted)' }}>Description</label>
+          <textarea maxLength={200} required value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe the deliverables..." rows={3} className="input w-full px-3 py-2" />
         </div>
 
+        {/* Required Skills */}
         <div>
-          <label className="block text-sm text-gray-400 mb-1">
-            Amount (USDC)
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            min="0.01"
-            required
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="100.00"
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
-          {wallet && (
-            <p className="text-xs text-gray-500 mt-1">
-              Balance: {balance.toFixed(2)} USDC
-            </p>
+          <label className="block text-sm mb-1" style={{ color: 'var(--text-muted)' }}>Required Skills</label>
+          <div className="flex gap-2 mb-2">
+            <input
+              type="text"
+              value={skillInput}
+              onChange={(e) => setSkillInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSkill(); } }}
+              placeholder="e.g. React, Solidity..."
+              className="input flex-1 px-3 py-1.5 text-sm"
+            />
+            <button type="button" onClick={addSkill} className="btn-ghost px-3 py-1.5 text-sm">Add</button>
+          </div>
+          {skills.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {skills.map((s) => (
+                <span key={s} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium" style={{ background: 'var(--accent-subtle)', color: 'var(--accent)', border: '1px solid rgba(124,58,237,0.2)' }}>
+                  {s}
+                  <button type="button" onClick={() => setSkills(skills.filter((x) => x !== s))}><X size={10} /></button>
+                </span>
+              ))}
+            </div>
           )}
         </div>
 
-        {/* Insufficient funds warning */}
+        <div>
+          <label className="block text-sm mb-1" style={{ color: 'var(--text-muted)' }}>Amount (USDC)</label>
+          <input type="number" step="0.01" min="0.01" required value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="100.00" className="input w-full px-3 py-2" />
+          {wallet && <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Balance: {balance.toFixed(2)} USDC</p>}
+        </div>
+
         {insufficientFunds && (
-          <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-3 flex items-center justify-between">
-            <p className="text-red-300 text-sm">
-              Insufficient USDC. You need{" "}
-              <strong>{shortfall.toFixed(2)} more</strong>.
+          <div className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)' }}>
+            <p className="text-sm" style={{ color: 'var(--danger)' }}>
+              Insufficient USDC. You need <strong>{shortfall.toFixed(2)} more</strong>.
             </p>
-            <button
-              type="button"
-              onClick={() => setShowTopUp(true)}
-              className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-xs text-white font-medium transition-colors"
-            >
-              Top Up
-            </button>
+            <button type="button" onClick={() => setShowTopUp(true)} className="btn-danger px-3 py-1 text-xs">Top Up</button>
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={loading || !wallet}
-          className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-lg text-white font-semibold transition-colors"
-        >
-          {loading ? (
-            <span className="flex items-center justify-center gap-2">
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                  fill="none"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
-              </svg>
-              Confirming...
-            </span>
-          ) : (
-            "Lock USDC & Post Job"
-          )}
+        <button type="submit" disabled={loading || !wallet} className="btn-primary w-full py-3">
+          {loading ? "Confirming..." : "Lock USDC & Post Job"}
         </button>
 
-        {!wallet && (
-          <p className="text-sm text-yellow-400">
-            Connect your wallet to post a job
-          </p>
-        )}
+        {!wallet && <p className="text-sm" style={{ color: 'var(--warning)' }}>Connect your wallet to post a job</p>}
       </form>
 
-      <TopUpModal
-        isOpen={showTopUp}
-        onClose={() => setShowTopUp(false)}
-        shortfall={shortfall}
-      />
+      <TopUpModal isOpen={showTopUp} onClose={() => setShowTopUp(false)} shortfall={shortfall} />
     </>
   );
 }

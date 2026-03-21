@@ -9,6 +9,8 @@ import { useProgramLogs } from "@/lib/useProgramLogs";
 import { useToast } from "@/components/TxToast";
 import JobCard from "@/components/JobCard";
 import { smallestToUsdc, type JobStatus } from "@/lib/anchor";
+import { useLocalProfile } from "@/lib/useLocalProfile";
+import { JOB_CATEGORIES, decodeJobMeta, type JobCategory } from "@/lib/categories";
 import ProfileGate from "@/components/ProfileGate";
 
 const FILTERS: { label: string; value: JobStatus | "All" }[] = [
@@ -33,6 +35,8 @@ export default function JobsPage() {
   const [sortBy, setSortBy] = useState<SortKey>("newest");
   const [minAmount, setMinAmount] = useState("");
   const [maxAmount, setMaxAmount] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<JobCategory | "All">("All");
+  const { profile: localProfile } = useLocalProfile(publicKey?.toBase58() ?? null);
 
   // Real-time updates
   useProgramLogs(() => {
@@ -79,8 +83,30 @@ export default function JobsPage() {
       list = list.filter((j) => smallestToUsdc(j.amount) <= max);
     }
 
-    // Sort
+    // Category filter
+    if (categoryFilter !== "All") {
+      list = list.filter((j) => {
+        const { meta } = decodeJobMeta(j.description);
+        return meta.category === categoryFilter;
+      });
+    }
+
+    // Sort — skills-matched jobs first in "working" mode
     list = [...list];
+
+    if (mode === "working" && localProfile.skills.length > 0) {
+      const mySkills = new Set(localProfile.skills.map((s) => s.toLowerCase()));
+      list.sort((a, b) => {
+        const aMeta = decodeJobMeta(a.description).meta;
+        const bMeta = decodeJobMeta(b.description).meta;
+        const aMatch = aMeta.skills.some((s) => mySkills.has(s.toLowerCase()));
+        const bMatch = bMeta.skills.some((s) => mySkills.has(s.toLowerCase()));
+        if (aMatch && !bMatch) return -1;
+        if (!aMatch && bMatch) return 1;
+        return 0;
+      });
+    }
+
     switch (sortBy) {
       case "newest":
         list.sort((a, b) => b.createdAt.toNumber() - a.createdAt.toNumber());
@@ -94,7 +120,7 @@ export default function JobsPage() {
     }
 
     return list;
-  }, [jobs, publicKey, mode, search, filter, minAmount, maxAmount, sortBy]);
+  }, [jobs, publicKey, mode, search, filter, minAmount, maxAmount, sortBy, categoryFilter, localProfile.skills]);
 
   const modeLabel = mode === "hiring" ? "Your Posted Jobs" : "Available Jobs";
 
@@ -179,6 +205,33 @@ export default function JobsPage() {
         )}
       </div>
 
+      {/* Category filter */}
+      <div className="flex gap-1.5 flex-wrap">
+        <button
+          onClick={() => setCategoryFilter("All")}
+          className="px-2.5 py-1 rounded text-xs font-medium transition-colors"
+          style={{
+            background: categoryFilter === "All" ? 'var(--accent)' : 'var(--bg-elevated)',
+            color: categoryFilter === "All" ? '#fff' : 'var(--text-muted)',
+          }}
+        >
+          All Categories
+        </button>
+        {JOB_CATEGORIES.map((c) => (
+          <button
+            key={c}
+            onClick={() => setCategoryFilter(c)}
+            className="px-2.5 py-1 rounded text-xs font-medium transition-colors"
+            style={{
+              background: categoryFilter === c ? 'var(--accent)' : 'var(--bg-elevated)',
+              color: categoryFilter === c ? '#fff' : 'var(--text-muted)',
+            }}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+
       {/* Status filters */}
       <div className="flex gap-2 flex-wrap">
         {FILTERS.map((f) => {
@@ -256,6 +309,15 @@ export default function JobsPage() {
               key={job.publicKey.toBase58()}
               job={job}
               onAction={refresh}
+              highlighted={
+                mode === "working" &&
+                localProfile.skills.length > 0 &&
+                decodeJobMeta(job.description).meta.skills.some((s) =>
+                  localProfile.skills.some(
+                    (ms) => ms.toLowerCase() === s.toLowerCase()
+                  )
+                )
+              }
             />
           ))}
         </div>

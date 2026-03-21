@@ -48,3 +48,9 @@
   Prevention rule: for ad-hoc verification scripts, either import generated `Program<Solwork>` types or cast `program as any` to avoid blocking runtime checks on type-only friction.
 - 2026-03-21: Mistake pattern: treated `anchor test` (without features) as equivalent to local deterministic tests, but non-feature build enforces devnet USDC mint and fails against mock local mint.
   Prevention rule: for this repo, run deterministic local suite with `anchor test -- --features local-testing`; reserve plain `anchor test` for scenarios using real devnet USDC mint/account setup.
+- 2026-03-21: Mistake pattern: enforced production juror thresholds (`jobs_completed >= 3`, low dispute count) in local deterministic tests, causing excessive fixture setup for simple Round 5 flow checks.
+  Prevention rule: use feature-gated test constants for expensive reputation thresholds while preserving strict criteria in non-test builds.
+- 2026-03-21: Mistake pattern: treated Anchor-decoded `i64` fields in TS tests as plain numbers; they are `BN` values and need conversion before arithmetic/assertions.
+  Prevention rule: for all `i64/u64` fields in Anchor TS tests, normalize via `.toString()` or `.toNumber()` before math.
+- 2026-03-21: Mistake pattern: assumed optional `Option<Account<...>>` accounts would be skippable in all TS method calls; current generated client still required explicit account keys.
+  Prevention rule: when introducing optional account fields in Anchor contexts, immediately update smoke/integration callers to always pass compatible placeholder accounts.

@@ -187,6 +187,16 @@
           }
         },
         {
+          "name": "referrer_profile",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "referrer_usdc_ata",
+          "writable": true,
+          "optional": true
+        },
+        {
           "name": "token_program",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         }
@@ -282,6 +292,180 @@
       ]
     },
     {
+      "name": "cast_vote",
+      "discriminator": [
+        20,
+        212,
+        15,
+        189,
+        69,
+        180,
+        69,
+        151
+      ],
+      "accounts": [
+        {
+          "name": "voter",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "client"
+        },
+        {
+          "name": "job",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  106,
+                  111,
+                  98
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "client"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "dispute_vote",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  105,
+                  115,
+                  112,
+                  117,
+                  116,
+                  101,
+                  95,
+                  118,
+                  111,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "job"
+              }
+            ]
+          }
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "escrow_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "job"
+              }
+            ]
+          }
+        },
+        {
+          "name": "client_usdc_ata",
+          "writable": true
+        },
+        {
+          "name": "freelancer"
+        },
+        {
+          "name": "freelancer_usdc_ata",
+          "writable": true
+        },
+        {
+          "name": "client_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "client"
+              }
+            ]
+          }
+        },
+        {
+          "name": "freelancer_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "freelancer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "job_id",
+          "type": "u64"
+        },
+        {
+          "name": "vote",
+          "type": "bool"
+        }
+      ]
+    },
+    {
       "name": "claim_after_grace",
       "discriminator": [
         84,
@@ -354,6 +538,44 @@
         {
           "name": "freelancer_usdc_ata",
           "writable": true
+        },
+        {
+          "name": "treasury_usdc_ata",
+          "writable": true
+        },
+        {
+          "name": "freelancer_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "freelancer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "referrer_profile",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "referrer_usdc_ata",
+          "writable": true,
+          "optional": true
         },
         {
           "name": "token_program",
@@ -538,6 +760,39 @@
               }
             ]
           }
+        },
+        {
+          "name": "dispute_vote",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  105,
+                  115,
+                  112,
+                  117,
+                  116,
+                  101,
+                  95,
+                  118,
+                  111,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "job"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -691,6 +946,21 @@
       ]
     },
     {
+      "name": "get_eligible_jurors",
+      "discriminator": [
+        26,
+        113,
+        237,
+        244,
+        184,
+        73,
+        225,
+        178
+      ],
+      "accounts": [],
+      "args": []
+    },
+    {
       "name": "init_profile",
       "discriminator": [
         210,
@@ -740,24 +1010,107 @@
       "args": []
     },
     {
-      "name": "resolve_dispute",
+      "name": "initiate_dispute_vote",
       "discriminator": [
-        231,
-        6,
-        202,
-        6,
-        96,
-        103,
-        12,
-        230
+        48,
+        250,
+        85,
+        118,
+        16,
+        189,
+        83,
+        154
       ],
       "accounts": [
         {
-          "name": "admin",
+          "name": "caller",
+          "writable": true,
           "signer": true
         },
         {
           "name": "client"
+        },
+        {
+          "name": "job",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  106,
+                  111,
+                  98
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "client"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "dispute_vote",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  105,
+                  115,
+                  112,
+                  117,
+                  116,
+                  101,
+                  95,
+                  118,
+                  111,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "job"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "job_id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "partial_release",
+      "discriminator": [
+        20,
+        4,
+        101,
+        245,
+        53,
+        131,
+        213,
+        8
+      ],
+      "accounts": [
+        {
+          "name": "client",
+          "writable": true,
+          "signer": true
         },
         {
           "name": "job",
@@ -809,15 +1162,35 @@
           }
         },
         {
-          "name": "client_usdc_ata",
-          "writable": true
-        },
-        {
           "name": "freelancer"
         },
         {
           "name": "freelancer_usdc_ata",
           "writable": true
+        },
+        {
+          "name": "freelancer_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "freelancer"
+              }
+            ]
+          }
         },
         {
           "name": "token_program",
@@ -830,12 +1203,251 @@
           "type": "u64"
         },
         {
-          "name": "client_amount",
+          "name": "amount",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "resolve_dispute",
+      "discriminator": [
+        231,
+        6,
+        202,
+        6,
+        96,
+        103,
+        12,
+        230
+      ],
+      "accounts": [
+        {
+          "name": "caller",
+          "signer": true
         },
         {
-          "name": "freelancer_amount",
+          "name": "client"
+        },
+        {
+          "name": "job",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  106,
+                  111,
+                  98
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "client"
+              },
+              {
+                "kind": "arg",
+                "path": "job_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "dispute_vote",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  105,
+                  115,
+                  112,
+                  117,
+                  116,
+                  101,
+                  95,
+                  118,
+                  111,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "job"
+              }
+            ]
+          }
+        },
+        {
+          "name": "usdc_mint"
+        },
+        {
+          "name": "escrow_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "job"
+              }
+            ]
+          }
+        },
+        {
+          "name": "client_usdc_ata",
+          "writable": true
+        },
+        {
+          "name": "freelancer"
+        },
+        {
+          "name": "freelancer_usdc_ata",
+          "writable": true
+        },
+        {
+          "name": "client_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "client"
+              }
+            ]
+          }
+        },
+        {
+          "name": "freelancer_profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "freelancer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "job_id",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "set_referral",
+      "discriminator": [
+        213,
+        23,
+        157,
+        74,
+        199,
+        152,
+        182,
+        8
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "referrer_profile",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "referrer_profile.owner",
+                "account": "UserProfile"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "referrer",
+          "type": "pubkey"
         }
       ]
     },
@@ -898,6 +1510,19 @@
     }
   ],
   "accounts": [
+    {
+      "name": "DisputeVote",
+      "discriminator": [
+        166,
+        202,
+        140,
+        76,
+        65,
+        35,
+        254,
+        149
+      ]
+    },
     {
       "name": "Job",
       "discriminator": [
@@ -963,6 +1588,32 @@
         128,
         236,
         187
+      ]
+    },
+    {
+      "name": "DisputeVoteCast",
+      "discriminator": [
+        193,
+        34,
+        94,
+        69,
+        4,
+        179,
+        143,
+        87
+      ]
+    },
+    {
+      "name": "DisputeVoteInitiated",
+      "discriminator": [
+        209,
+        141,
+        30,
+        244,
+        200,
+        130,
+        125,
+        116
       ]
     },
     {
@@ -1044,6 +1695,19 @@
       ]
     },
     {
+      "name": "PartialRelease",
+      "discriminator": [
+        105,
+        17,
+        225,
+        230,
+        77,
+        206,
+        194,
+        49
+      ]
+    },
+    {
       "name": "ProfileInitialized",
       "discriminator": [
         1,
@@ -1054,6 +1718,32 @@
         205,
         23,
         27
+      ]
+    },
+    {
+      "name": "ReferralEarned",
+      "discriminator": [
+        243,
+        117,
+        80,
+        205,
+        187,
+        9,
+        77,
+        23
+      ]
+    },
+    {
+      "name": "ReferralSet",
+      "discriminator": [
+        39,
+        37,
+        242,
+        37,
+        60,
+        116,
+        243,
+        5
       ]
     },
     {
@@ -1183,6 +1873,66 @@
     },
     {
       "code": 6022,
+      "name": "ReleaseAmountExceedsVaultBalance",
+      "msg": "Partial release amount exceeds vault balance."
+    },
+    {
+      "code": 6023,
+      "name": "EmptyEscrowVault",
+      "msg": "Escrow vault is empty."
+    },
+    {
+      "code": 6024,
+      "name": "InvalidDisputeVote",
+      "msg": "Dispute vote account does not match this job."
+    },
+    {
+      "code": 6025,
+      "name": "UnauthorizedJuror",
+      "msg": "Only assigned jurors can cast dispute votes."
+    },
+    {
+      "code": 6026,
+      "name": "VoteAlreadyCast",
+      "msg": "This juror has already voted."
+    },
+    {
+      "code": 6027,
+      "name": "DisputeAlreadyResolved",
+      "msg": "Dispute is already resolved."
+    },
+    {
+      "code": 6028,
+      "name": "InsufficientVotes",
+      "msg": "Not enough votes to resolve dispute."
+    },
+    {
+      "code": 6029,
+      "name": "NotEnoughEligibleJurors",
+      "msg": "At least three eligible jurors are required."
+    },
+    {
+      "code": 6030,
+      "name": "ReferralAlreadySet",
+      "msg": "Referral can only be set once."
+    },
+    {
+      "code": 6031,
+      "name": "ReferralMustBeSetBeforeCompletion",
+      "msg": "Referral must be set before first completion."
+    },
+    {
+      "code": 6032,
+      "name": "InvalidReferrer",
+      "msg": "Invalid referrer profile or token account."
+    },
+    {
+      "code": 6033,
+      "name": "MissingReferralAccounts",
+      "msg": "Missing referrer profile/token accounts in remaining accounts."
+    },
+    {
+      "code": 6034,
       "name": "MathOverflow",
       "msg": "Math overflow."
     }
@@ -1230,12 +1980,110 @@
             "type": "u64"
           },
           {
-            "name": "client_amount",
+            "name": "winner",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DisputeVote",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "dispute_key",
+            "type": "pubkey"
+          },
+          {
+            "name": "juror_1",
+            "type": "pubkey"
+          },
+          {
+            "name": "juror_2",
+            "type": "pubkey"
+          },
+          {
+            "name": "juror_3",
+            "type": "pubkey"
+          },
+          {
+            "name": "vote_1",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "vote_2",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "vote_3",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "resolved",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DisputeVoteCast",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "job_id",
             "type": "u64"
           },
           {
-            "name": "freelancer_amount",
+            "name": "juror",
+            "type": "pubkey"
+          },
+          {
+            "name": "vote",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DisputeVoteInitiated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "job_id",
             "type": "u64"
+          },
+          {
+            "name": "juror_1",
+            "type": "pubkey"
+          },
+          {
+            "name": "juror_2",
+            "type": "pubkey"
+          },
+          {
+            "name": "juror_3",
+            "type": "pubkey"
           }
         ]
       }
@@ -1450,12 +2298,64 @@
       }
     },
     {
+      "name": "PartialRelease",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "job_id",
+            "type": "u64"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "remaining",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "ProfileInitialized",
       "type": {
         "kind": "struct",
         "fields": [
           {
             "name": "owner",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReferralEarned",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "referrer",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReferralSet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "referrer",
             "type": "pubkey"
           }
         ]
@@ -1489,6 +2389,20 @@
           {
             "name": "total_spent",
             "type": "u64"
+          },
+          {
+            "name": "referred_by",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "referral_earnings",
+            "type": "u64"
+          },
+          {
+            "name": "reputation_score",
+            "type": "i64"
           },
           {
             "name": "member_since",

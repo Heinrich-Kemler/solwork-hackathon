@@ -177,6 +177,9 @@ async function run(): Promise<void> {
       treasuryUsdcAta,
       clientProfile,
       freelancerProfile,
+      // Placeholder optional accounts; no referral payout occurs unless freelancer profile has referred_by set.
+      referrerProfile: freelancerProfile,
+      referrerUsdcAta: freelancerUsdcAta,
       tokenProgram: TOKEN_PROGRAM_ID,
     } as any)
     .rpc();

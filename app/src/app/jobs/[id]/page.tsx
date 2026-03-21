@@ -21,6 +21,7 @@ import {
 import { useToast } from "@/components/TxToast";
 import { useProgramLogs } from "@/lib/useProgramLogs";
 import JobComments from "@/components/JobComments";
+import DisputeVoting from "@/components/DisputeVoting";
 
 function CopyableAddress({
   address,
@@ -270,6 +271,15 @@ export default function JobDetailPage({
           </h3>
           <p className="text-white leading-relaxed">{job.disputeReason}</p>
         </div>
+      )}
+
+      {/* Dispute Voting (if disputed) */}
+      {job.status === "Disputed" && (
+        <DisputeVoting
+          client={job.client}
+          freelancer={job.freelancer}
+          jobId={job.jobId}
+        />
       )}
 
       {/* Details */}

@@ -127,6 +127,13 @@ export function getProfilePDA(owner: PublicKey): [PublicKey, number] {
   );
 }
 
+export function getDisputeVotePDA(jobPDA: PublicKey): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("dispute"), jobPDA.toBuffer()],
+    PROGRAM_ID
+  );
+}
+
 // ── Status Parsing ─────────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -245,7 +252,8 @@ export async function txApproveJob(
   program: SolworkProgram,
   client: PublicKey,
   freelancer: PublicKey,
-  jobId: BN
+  jobId: BN,
+  referrer?: PublicKey
 ): Promise<string> {
   const [jobPDA] = getJobPDA(client, jobId);
   const [vaultPDA] = getVaultPDA(jobPDA);
@@ -253,6 +261,11 @@ export async function txApproveJob(
   const treasuryUsdcAta = getAssociatedTokenAddressSync(USDC_DEVNET_MINT, TREASURY_WALLET);
   const [clientProfilePDA] = getProfilePDA(client);
   const [freelancerProfilePDA] = getProfilePDA(freelancer);
+
+  // Referrer — use freelancer's referrer if set, otherwise use freelancer's own profile as placeholder
+  const refKey = referrer && !referrer.equals(PublicKey.default) ? referrer : freelancer;
+  const [referrerProfilePDA] = getProfilePDA(refKey);
+  const referrerUsdcAta = getAssociatedTokenAddressSync(USDC_DEVNET_MINT, refKey);
 
   return rpc(program, "approveJob", [jobId], {
     client,
@@ -264,6 +277,8 @@ export async function txApproveJob(
     treasuryUsdcAta,
     clientProfile: clientProfilePDA,
     freelancerProfile: freelancerProfilePDA,
+    referrerProfile: referrerProfilePDA,
+    referrerUsdcAta,
     tokenProgram: TOKEN_PROGRAM_ID,
   });
 }
@@ -277,12 +292,104 @@ export async function txDisputeJob(
 ): Promise<string> {
   const [jobPDA] = getJobPDA(client, jobId);
   const [actorProfilePDA] = getProfilePDA(actor);
+  const [disputeVotePDA] = getDisputeVotePDA(jobPDA);
 
   return rpc(program, "disputeJob", [jobId, disputeReason], {
     actor,
     client,
     job: jobPDA,
     actorProfile: actorProfilePDA,
+    disputeVote: disputeVotePDA,
+    systemProgram: SystemProgram.programId,
+  });
+}
+
+export async function txInitiateDisputeVote(
+  program: SolworkProgram,
+  caller: PublicKey,
+  client: PublicKey,
+  jobId: BN
+): Promise<string> {
+  const [jobPDA] = getJobPDA(client, jobId);
+  const [disputeVotePDA] = getDisputeVotePDA(jobPDA);
+
+  return rpc(program, "initiateDisputeVote", [jobId], {
+    caller,
+    client,
+    job: jobPDA,
+    disputeVote: disputeVotePDA,
+    systemProgram: SystemProgram.programId,
+  });
+}
+
+export async function txCastVote(
+  program: SolworkProgram,
+  voter: PublicKey,
+  client: PublicKey,
+  freelancer: PublicKey,
+  jobId: BN,
+  vote: boolean
+): Promise<string> {
+  const [jobPDA] = getJobPDA(client, jobId);
+  const [disputeVotePDA] = getDisputeVotePDA(jobPDA);
+  const [vaultPDA] = getVaultPDA(jobPDA);
+  const clientUsdcAta = getAssociatedTokenAddressSync(USDC_DEVNET_MINT, client);
+  const freelancerUsdcAta = getAssociatedTokenAddressSync(USDC_DEVNET_MINT, freelancer);
+  const [clientProfilePDA] = getProfilePDA(client);
+  const [freelancerProfilePDA] = getProfilePDA(freelancer);
+
+  return rpc(program, "castVote", [jobId, vote], {
+    voter,
+    client,
+    job: jobPDA,
+    disputeVote: disputeVotePDA,
+    usdcMint: USDC_DEVNET_MINT,
+    escrowVault: vaultPDA,
+    clientUsdcAta,
+    freelancer,
+    freelancerUsdcAta,
+    clientProfile: clientProfilePDA,
+    freelancerProfile: freelancerProfilePDA,
+    tokenProgram: TOKEN_PROGRAM_ID,
+  });
+}
+
+export async function txPartialRelease(
+  program: SolworkProgram,
+  client: PublicKey,
+  freelancer: PublicKey,
+  jobId: BN,
+  amount: BN
+): Promise<string> {
+  const [jobPDA] = getJobPDA(client, jobId);
+  const [vaultPDA] = getVaultPDA(jobPDA);
+  const freelancerUsdcAta = getAssociatedTokenAddressSync(USDC_DEVNET_MINT, freelancer);
+  const [freelancerProfilePDA] = getProfilePDA(freelancer);
+
+  return rpc(program, "partialRelease", [jobId, amount], {
+    client,
+    job: jobPDA,
+    usdcMint: USDC_DEVNET_MINT,
+    escrowVault: vaultPDA,
+    freelancer,
+    freelancerUsdcAta,
+    freelancerProfile: freelancerProfilePDA,
+    tokenProgram: TOKEN_PROGRAM_ID,
+  });
+}
+
+export async function txSetReferral(
+  program: SolworkProgram,
+  signer: PublicKey,
+  referrer: PublicKey
+): Promise<string> {
+  const [signerProfilePDA] = getProfilePDA(signer);
+  const [referrerProfilePDA] = getProfilePDA(referrer);
+
+  return rpc(program, "setReferral", [referrer], {
+    signer,
+    profile: signerProfilePDA,
+    referrerProfile: referrerProfilePDA,
   });
 }
 
