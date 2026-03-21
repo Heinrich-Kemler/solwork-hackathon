@@ -1,0 +1,29 @@
+# SolWork Anchor Backend MVP TODO
+
+- [ ] Read `tasks/lessons.md` at session start.
+- [ ] Replace SOL escrow program with USDC-based escrow in `programs/solwork/src/lib.rs`.
+- [ ] Implement required account model:
+  - [ ] `Job` fields: `title`, `description`, `amount`, `client`, `freelancer`, `status`, `milestone_approved`, `created_at`.
+  - [ ] Internal fields: `job_id`, PDA bumps.
+  - [ ] `JobStatus`: `Open | Active | Complete | Disputed`.
+- [ ] Enforce devnet USDC mint constant `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`.
+- [ ] Implement instructions:
+  - [ ] `create_job(job_id, title, description, amount)`
+  - [ ] `accept_job(job_id)`
+  - [ ] `approve_job(job_id)`
+  - [ ] `dispute_job(job_id)`
+- [ ] Add strict errors/constraints for invalid signer, invalid status transitions, zero amount, duplicate acceptance.
+- [ ] Update Anchor config/scripts as needed for stable local tests + devnet deploy flow.
+- [ ] Rewrite tests for:
+  - [ ] Happy path (create -> accept -> approve -> release)
+  - [ ] Dispute path (create -> accept -> dispute -> funds frozen)
+- [ ] Add devnet smoke test/script using real devnet USDC mint.
+- [ ] Verify locally:
+  - [ ] `anchor build`
+  - [ ] `anchor test`
+- [ ] Verify devnet:
+  - [ ] `anchor deploy --provider.cluster devnet`
+  - [ ] Capture Program ID
+  - [ ] Confirm IDL at `target/idl/solwork.json`
+- [ ] Update docs/README with backend usage and run instructions.
+- [ ] Mark all completed items and summarize final output for frontend handoff.

@@ -1,0 +1,44 @@
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+import WalletProvider from "@/components/WalletProvider";
+import { ToastProvider } from "@/components/TxToast";
+import Navbar from "@/components/Navbar";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+  title: "solwork — Trustless Freelance Escrow on Solana",
+  description:
+    "Milestone-based freelance escrow dApp. Client locks SOL, freelancer delivers, funds release instantly on approval.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col bg-[#0f0f0f] text-white">
+        <WalletProvider>
+          <ToastProvider>
+            <Navbar />
+            <main className="flex-1">{children}</main>
+          </ToastProvider>
+        </WalletProvider>
+      </body>
+    </html>
+  );
+}
