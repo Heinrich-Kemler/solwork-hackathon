@@ -19,7 +19,7 @@ export const USDC_DEVNET_MINT = new PublicKey(
   "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
 );
 export const TREASURY_WALLET = new PublicKey(
-  "Fg6PaFpoGXkYsidMpWxTWqkYMdL4C9dQW9i7RkQ4xkfj"
+  "GyyjsG67zY21B2BYfLsNUbN9hZLfog9DZYRjnZuHWzfQ"
 );
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -234,15 +234,18 @@ export async function txCreateJob(
   amount: BN
 ): Promise<string> {
   const [jobPDA] = getJobPDA(client, jobId);
+  const [clientProfilePDA] = getProfilePDA(client);
   const [vaultPDA] = getVaultPDA(jobPDA);
   const clientUsdcAta = getAssociatedTokenAddressSync(USDC_DEVNET_MINT, client);
 
   return rpc(program, "createJob", [jobId, title, description, amount], {
     client,
     job: jobPDA,
+    clientProfile: clientProfilePDA,
     usdcMint: USDC_DEVNET_MINT,
     clientUsdcAta,
     escrowVault: vaultPDA,
+    treasuryWallet: TREASURY_WALLET,
     tokenProgram: TOKEN_PROGRAM_ID,
     systemProgram: SystemProgram.programId,
     rent: SYSVAR_RENT_PUBKEY,

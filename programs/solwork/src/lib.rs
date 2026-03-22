@@ -1,10 +1,11 @@
 use anchor_lang::prelude::*;
+use anchor_lang::system_program::{self, Transfer as SystemTransfer};
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
 declare_id!("3HP12EX32vPRnocDfy1SqRpFZSJUnyWkCDPGarhn9CGj");
 
 pub const DEVNET_USDC_MINT: Pubkey = pubkey!("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
-pub const TREASURY_WALLET: Pubkey = pubkey!("Fg6PaFpoGXkYsidMpWxTWqkYMdL4C9dQW9i7RkQ4xkfj");
+pub const TREASURY_WALLET: Pubkey = pubkey!("GyyjsG67zY21B2BYfLsNUbN9hZLfog9DZYRjnZuHWzfQ");
 
 pub const MAX_TITLE_LEN: usize = 64;
 pub const MAX_DESCRIPTION_LEN: usize = 256;
@@ -37,6 +38,7 @@ pub const MAX_JUROR_DISPUTES_RAISED: u32 = u32::MAX;
 #[cfg(not(feature = "local-testing"))]
 pub const MAX_JUROR_DISPUTES_RAISED: u32 = 1;
 pub const JUROR_COUNT: usize = 3;
+pub const ACTIVATION_FEE_LAMPORTS: u64 = 10_000_000; // 0.01 SOL
 
 #[program]
 pub mod solwork {
@@ -118,6 +120,26 @@ pub mod solwork {
             description.len() <= MAX_DESCRIPTION_LEN,
             EscrowError::DescriptionTooLong
         );
+
+        let client_profile = &mut ctx.accounts.client_profile;
+        if client_profile.jobs_posted == 0 {
+            // Activation fee: 0.01 SOL on first job post
+            system_program::transfer(
+                CpiContext::new(
+                    ctx.accounts.system_program.to_account_info(),
+                    SystemTransfer {
+                        from: ctx.accounts.client.to_account_info(),
+                        to: ctx.accounts.treasury_wallet.to_account_info(),
+                    },
+                ),
+                ACTIVATION_FEE_LAMPORTS,
+            )?;
+        }
+        client_profile.jobs_posted = client_profile
+            .jobs_posted
+            .checked_add(1)
+            .ok_or(EscrowError::MathOverflow)?;
+
         validate_usdc_mint(ctx.accounts.usdc_mint.key())?;
 
         token::transfer(
@@ -370,6 +392,7 @@ pub mod solwork {
             ctx.accounts.freelancer.key(),
             EscrowError::InvalidFreelancer
         );
+        let job_key = job.key();
 
         let vault_balance = ctx.accounts.escrow_vault.amount;
         require!(vault_balance > 0, EscrowError::EmptyEscrowVault);
@@ -488,10 +511,6 @@ pub mod solwork {
         job.status = JobStatus::Complete;
 
         let client_profile = &mut ctx.accounts.client_profile;
-        client_profile.jobs_posted = client_profile
-            .jobs_posted
-            .checked_add(1)
-            .ok_or(EscrowError::MathOverflow)?;
         client_profile.total_spent = client_profile
             .total_spent
             .checked_add(job.amount)
@@ -510,6 +529,13 @@ pub mod solwork {
         emit!(JobApproved {
             job_id,
             amount_released: freelancer_amount,
+        });
+        emit!(JobCompletedEvent {
+            job: job_key,
+            client: job.client,
+            freelancer: job.freelancer,
+            amount: vault_balance,
+            timestamp: Clock::get()?.unix_timestamp,
         });
 
         msg!(
@@ -1234,6 +1260,14 @@ pub struct CreateJob<'info> {
     )]
     pub job: Account<'info, Job>,
 
+    #[account(
+        mut,
+        seeds = [b"profile", client.key().as_ref()],
+        bump,
+        constraint = client_profile.owner == client.key() @ EscrowError::Unauthorized,
+    )]
+    pub client_profile: Account<'info, UserProfile>,
+
     pub usdc_mint: Account<'info, Mint>,
 
     #[account(
@@ -1252,6 +1286,13 @@ pub struct CreateJob<'info> {
         token::authority = job,
     )]
     pub escrow_vault: Account<'info, TokenAccount>,
+
+    /// CHECK: Fixed treasury wallet enforced by address constraint.
+    #[account(
+        mut,
+        address = TREASURY_WALLET @ EscrowError::InvalidTreasuryWallet,
+    )]
+    pub treasury_wallet: UncheckedAccount<'info>,
 
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
@@ -1911,6 +1952,15 @@ pub struct JobApproved {
 }
 
 #[event]
+pub struct JobCompletedEvent {
+    pub job: Pubkey,
+    pub client: Pubkey,
+    pub freelancer: Pubkey,
+    pub amount: u64,
+    pub timestamp: i64,
+}
+
+#[event]
 pub struct PartialRelease {
     pub job_id: u64,
     pub amount: u64,
@@ -2011,6 +2061,8 @@ pub enum EscrowError {
     InvalidTokenOwner,
     #[msg("Token account mint is invalid.")]
     InvalidTokenMint,
+    #[msg("Provided treasury wallet is invalid.")]
+    InvalidTreasuryWallet,
     #[msg("Provided treasury token account is invalid.")]
     InvalidTreasuryAccount,
     #[msg("Provided job_id does not match the job account.")]
