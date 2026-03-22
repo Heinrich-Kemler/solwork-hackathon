@@ -12,6 +12,7 @@ import {
   explorerAccountUrl,
   txAcceptJob,
   txApproveJob,
+  txClaimAfterGrace,
   txDisputeJob,
   txCancelJob,
   txSubmitWork,
@@ -84,9 +85,8 @@ export default function JobDetailPage({
   const [disputeReason, setDisputeReason] = useState("");
   const [showSubmitForm, setShowSubmitForm] = useState(false);
   const [showDisputeForm, setShowDisputeForm] = useState(false);
-  const [releasePercent, setReleasePercent] = useState(100);
-  const [showReleaseSlider, setShowReleaseSlider] = useState(false);
   const [showConfirmRelease, setShowConfirmRelease] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<"approve" | "claim">("approve");
 
   const isClient =
     wallet && job?.client && wallet.publicKey.equals(job.client);
@@ -163,6 +163,20 @@ export default function JobDetailPage({
           );
           showToast(
             `Job cancelled, ${smallestToUsdc(job.amount)} USDC refunded`,
+            "success",
+            tx
+          );
+          break;
+        }
+        case "claim": {
+          const tx = await txClaimAfterGrace(
+            program,
+            wallet.publicKey,
+            job.client,
+            job.jobId
+          );
+          showToast(
+            `${smallestToUsdc(job.amount)} USDC claimed via grace period!`,
             "success",
             tx
           );
@@ -347,14 +361,31 @@ export default function JobDetailPage({
               </button>
             )}
 
-            {/* PendingReview: Approve with tranche slider (client) */}
+            {/* PendingReview: Approve (client) */}
             {job.status === "PendingReview" && isClient && (
               <button
-                onClick={() => setShowReleaseSlider(!showReleaseSlider)}
-                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg text-white font-semibold transition-colors"
+                onClick={() => { setConfirmAction("approve"); setShowConfirmRelease(true); }}
+                disabled={actionLoading === "approve"}
+                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 rounded-lg text-white font-semibold transition-colors"
               >
-                Approve & Release USDC
+                {actionLoading === "approve" ? "Releasing..." : "Approve & Release USDC"}
               </button>
+            )}
+
+            {/* PendingReview: Claim after grace (freelancer) */}
+            {job.status === "PendingReview" && isFreelancer && (
+              <div>
+                <button
+                  onClick={() => { setConfirmAction("claim"); setShowConfirmRelease(true); }}
+                  disabled={actionLoading === "claim"}
+                  className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-lg text-white font-semibold transition-colors"
+                >
+                  {actionLoading === "claim" ? "Claiming..." : "Claim Payment (Grace Period)"}
+                </button>
+                <p className="text-xs mt-1.5" style={{ color: 'var(--text-muted)' }}>
+                  Available after the grace period has elapsed on-chain
+                </p>
+              </div>
             )}
 
             {/* Active/PendingReview: Dispute (client or freelancer) */}
@@ -390,47 +421,6 @@ export default function JobDetailPage({
                 {actionLoading === "submit"
                   ? "Submitting..."
                   : "Submit for Review"}
-              </button>
-            </div>
-          )}
-
-          {/* Release Slider */}
-          {showReleaseSlider && job && (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Release amount</span>
-                <span className="text-lg font-bold text-purple-400">
-                  {((smallestToUsdc(job.amount) * releasePercent) / 100).toFixed(
-                    2
-                  )}{" "}
-                  USDC
-                </span>
-              </div>
-              <input
-                type="range"
-                min={10}
-                max={100}
-                step={5}
-                value={releasePercent}
-                onChange={(e) => setReleasePercent(Number(e.target.value))}
-                className="w-full accent-purple-500"
-              />
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>10%</span>
-                <span className="font-semibold text-white">
-                  {releasePercent}%
-                </span>
-                <span>100%</span>
-              </div>
-              <p className="text-xs text-gray-500">
-                MVP: Full release only. Partial tranches coming in v2.
-              </p>
-              <button
-                onClick={() => setShowConfirmRelease(true)}
-                disabled={actionLoading === "approve"}
-                className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 rounded-lg text-white font-semibold transition-colors"
-              >
-                {`Release ${((smallestToUsdc(job.amount) * releasePercent) / 100).toFixed(2)} USDC`}
               </button>
             </div>
           )}
@@ -478,10 +468,10 @@ export default function JobDetailPage({
           onClose={() => setShowConfirmRelease(false)}
           onConfirm={() => {
             setShowConfirmRelease(false);
-            handleAction("approve");
+            handleAction(confirmAction);
           }}
-          amount={((smallestToUsdc(job.amount) * releasePercent) / 100).toFixed(2)}
-          loading={actionLoading === "approve"}
+          amount={smallestToUsdc(job.amount).toFixed(2)}
+          loading={actionLoading === "approve" || actionLoading === "claim"}
         />
       )}
     </div>

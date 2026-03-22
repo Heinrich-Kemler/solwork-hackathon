@@ -14,7 +14,7 @@ const DEVNET_USDC_MINT = new PublicKey(
   "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
 );
 const TREASURY_WALLET = new PublicKey(
-  "Fg6PaFpoGXkYsidMpWxTWqkYMdL4C9dQW9i7RkQ4xkfj"
+  "GyyjsG67zY21B2BYfLsNUbN9hZLfog9DZYRjnZuHWzfQ"
 );
 
 async function run(): Promise<void> {
@@ -97,26 +97,42 @@ async function run(): Promise<void> {
     program.programId
   );
 
+  let initClientOk = true;
   if (!(await connection.getAccountInfo(clientProfile))) {
+    try {
+      await program.methods
+        .initProfile()
+        .accounts({
+          signer: wallet.publicKey,
+          profile: clientProfile,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        } as any)
+        .rpc();
+      console.log("init_profile(client): PASS");
+    } catch (error) {
+      initClientOk = false;
+      console.error("init_profile(client): FAIL", error);
+    }
+  } else {
+    console.log("init_profile(client): PASS (already initialized)");
+  }
+
+  let initFreelancerOk = true;
+  try {
     await program.methods
       .initProfile()
       .accounts({
-        signer: wallet.publicKey,
-        profile: clientProfile,
+        signer: freelancer.publicKey,
+        profile: freelancerProfile,
         systemProgram: anchor.web3.SystemProgram.programId,
       } as any)
+      .signers([freelancer])
       .rpc();
+    console.log("init_profile(freelancer): PASS");
+  } catch (error) {
+    initFreelancerOk = false;
+    console.error("init_profile(freelancer): FAIL", error);
   }
-
-  await program.methods
-    .initProfile()
-    .accounts({
-      signer: freelancer.publicKey,
-      profile: freelancerProfile,
-      systemProgram: anchor.web3.SystemProgram.programId,
-    } as any)
-    .signers([freelancer])
-    .rpc();
 
   const [jobPda] = PublicKey.findProgramAddressSync(
     [
@@ -131,58 +147,108 @@ async function run(): Promise<void> {
     program.programId
   );
 
-  const createSig = await program.methods
-    .createJob(jobId, "Devnet smoke", "Smoke test escrow flow", amount)
-    .accounts({
-      client: wallet.publicKey,
-      job: jobPda,
-      usdcMint: DEVNET_USDC_MINT,
-      clientUsdcAta,
-      escrowVault: vaultPda,
-      tokenProgram: TOKEN_PROGRAM_ID,
-      systemProgram: anchor.web3.SystemProgram.programId,
-      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-    } as any)
-    .rpc();
+  let createSig = "";
+  let createOk = false;
+  try {
+    createSig = await program.methods
+      .createJob(jobId, "Devnet smoke", "Smoke test escrow flow", amount)
+      .accounts({
+        client: wallet.publicKey,
+        job: jobPda,
+        clientProfile,
+        usdcMint: DEVNET_USDC_MINT,
+        clientUsdcAta,
+        escrowVault: vaultPda,
+        treasuryWallet: TREASURY_WALLET,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      } as any)
+      .rpc();
+    createOk = true;
+    console.log("create_job: PASS");
+  } catch (error) {
+    console.error("create_job: FAIL", error);
+  }
 
-  const acceptSig = await program.methods
-    .acceptJob(jobId)
-    .accounts({
-      freelancer: freelancer.publicKey,
-      client: wallet.publicKey,
-      job: jobPda,
-    } as any)
-    .signers([freelancer])
-    .rpc();
+  let acceptSig = "";
+  let acceptOk = false;
+  if (createOk) {
+    try {
+      acceptSig = await program.methods
+        .acceptJob(jobId)
+        .accounts({
+          freelancer: freelancer.publicKey,
+          client: wallet.publicKey,
+          job: jobPda,
+        } as any)
+        .signers([freelancer])
+        .rpc();
+      acceptOk = true;
+      console.log("accept_job: PASS");
+    } catch (error) {
+      console.error("accept_job: FAIL", error);
+    }
+  } else {
+    console.log("accept_job: SKIPPED (create_job failed)");
+  }
 
-  const submitSig = await program.methods
-    .submitWork(jobId, "Smoke-test deliverable submitted")
-    .accounts({
-      freelancer: freelancer.publicKey,
-      client: wallet.publicKey,
-      job: jobPda,
-    } as any)
-    .signers([freelancer])
-    .rpc();
+  let submitSig = "";
+  let submitOk = false;
+  if (acceptOk) {
+    try {
+      submitSig = await program.methods
+        .submitWork(jobId, "Smoke-test deliverable submitted")
+        .accounts({
+          freelancer: freelancer.publicKey,
+          client: wallet.publicKey,
+          job: jobPda,
+        } as any)
+        .signers([freelancer])
+        .rpc();
+      submitOk = true;
+      console.log("submit_work: PASS");
+    } catch (error) {
+      console.error("submit_work: FAIL", error);
+    }
+  } else {
+    console.log("submit_work: SKIPPED (accept_job failed)");
+  }
 
-  const approveSig = await program.methods
-    .approveJob(jobId)
-    .accounts({
-      client: wallet.publicKey,
-      job: jobPda,
-      usdcMint: DEVNET_USDC_MINT,
-      escrowVault: vaultPda,
-      freelancer: freelancer.publicKey,
-      freelancerUsdcAta,
-      treasuryUsdcAta,
-      clientProfile,
-      freelancerProfile,
-      // Placeholder optional accounts; no referral payout occurs unless freelancer profile has referred_by set.
-      referrerProfile: freelancerProfile,
-      referrerUsdcAta: freelancerUsdcAta,
-      tokenProgram: TOKEN_PROGRAM_ID,
-    } as any)
-    .rpc();
+  let approveSig = "";
+  let approveOk = false;
+  if (submitOk) {
+    try {
+      approveSig = await program.methods
+        .approveJob(jobId)
+        .accounts({
+          client: wallet.publicKey,
+          job: jobPda,
+          usdcMint: DEVNET_USDC_MINT,
+          escrowVault: vaultPda,
+          freelancer: freelancer.publicKey,
+          freelancerUsdcAta,
+          treasuryUsdcAta,
+          clientProfile,
+          freelancerProfile,
+          // Placeholder optional accounts; no referral payout occurs unless freelancer profile has referred_by set.
+          referrerProfile: freelancerProfile,
+          referrerUsdcAta: freelancerUsdcAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        } as any)
+        .rpc();
+      approveOk = true;
+      console.log("approve_job: PASS");
+    } catch (error) {
+      console.error("approve_job: FAIL", error);
+    }
+  } else {
+    console.log("approve_job: SKIPPED (submit_work failed)");
+  }
+
+  if (!initClientOk || !initFreelancerOk || !createOk || !acceptOk || !submitOk || !approveOk) {
+    throw new Error("Devnet smoke had one or more failed steps.");
+  }
 
   const job = await program.account.job.fetch(jobPda);
   const finalStatus = Object.keys(job.status)[0];

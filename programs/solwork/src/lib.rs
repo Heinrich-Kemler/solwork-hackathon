@@ -135,10 +135,6 @@ pub mod solwork {
                 ACTIVATION_FEE_LAMPORTS,
             )?;
         }
-        client_profile.jobs_posted = client_profile
-            .jobs_posted
-            .checked_add(1)
-            .ok_or(EscrowError::MathOverflow)?;
 
         validate_usdc_mint(ctx.accounts.usdc_mint.key())?;
 
@@ -153,6 +149,11 @@ pub mod solwork {
             ),
             amount,
         )?;
+
+        client_profile.jobs_posted = client_profile
+            .jobs_posted
+            .checked_add(1)
+            .ok_or(EscrowError::MathOverflow)?;
 
         let now = Clock::get()?.unix_timestamp;
         let expiry_time = now
@@ -358,12 +359,7 @@ pub mod solwork {
             .ok_or(EscrowError::MathOverflow)?;
 
         let job = &mut ctx.accounts.job;
-        if remaining == 0 {
-            job.status = JobStatus::Complete;
-            job.milestone_approved = true;
-        } else {
-            job.status = JobStatus::Active;
-        }
+        job.status = JobStatus::Active;
 
         emit!(PartialRelease {
             job_id,

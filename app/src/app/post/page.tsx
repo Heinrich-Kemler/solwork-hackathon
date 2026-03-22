@@ -20,9 +20,10 @@ const WalletMultiButton = dynamic(
 export default function PostJobPage() {
   const router = useRouter();
   const { connected } = useWallet();
-  const { profile } = useProfile();
+  const { profile, exists, needsRecreate, loading: profileLoading } = useProfile();
   const [showSwap, setShowSwap] = useState(false);
   const isFirstPost = profile ? profile.jobsPosted === 0 : true;
+  const profileReady = exists && !needsRecreate;
 
   return (
     <ProfileGate>
@@ -82,8 +83,26 @@ export default function PostJobPage() {
         </div>
       )}
 
+      {/* Profile required banner */}
+      {connected && !profileLoading && !profileReady && (
+        <div className="rounded-xl p-5 text-center space-y-3" style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)' }}>
+          <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+            You need to set up your profile before posting a job.
+          </p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            {needsRecreate ? "Your profile needs to be updated. Please recreate it." : "Create your on-chain profile to get started."}
+          </p>
+          <button
+            onClick={() => router.push("/onboarding")}
+            className="btn-primary px-6 py-2.5"
+          >
+            Set Up Profile
+          </button>
+        </div>
+      )}
+
       {/* Create form */}
-      {connected ? (
+      {connected && profileReady ? (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
           <CreateJob
             onCreated={() => {
@@ -91,7 +110,7 @@ export default function PostJobPage() {
             }}
           />
         </div>
-      ) : (
+      ) : connected ? null : (
         <div className="text-center py-16 space-y-4">
           <p className="text-gray-400 text-lg">
             Connect your wallet to post a job

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useUsdcBalance } from "@/lib/useUsdcBalance";
 
@@ -27,6 +27,7 @@ export default function JupiterSwap({
   const { wallet, publicKey } = useWallet();
   const { refresh: refreshBalance } = useUsdcBalance();
   const initialized = useRef(false);
+  const [showFallback, setShowFallback] = useState(false);
 
   useEffect(() => {
     if (!window.Jupiter || initialized.current) return;
@@ -68,9 +69,23 @@ export default function JupiterSwap({
     initialized.current = false;
   }, [publicKey]);
 
+  // Fallback if Jupiter doesn't load within 3 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!initialized.current) setShowFallback(true);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="rounded-xl overflow-hidden bg-[#111]">
-      <div id={containerId} style={{ minHeight: 300 }} />
+      <div id={containerId} style={{ minHeight: showFallback && !initialized.current ? 0 : 300 }} />
+      {showFallback && !initialized.current && (
+        <div className="text-center p-8" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-sm">Swap powered by Jupiter</p>
+          <p className="text-xs mt-1">Connect your wallet to load the swap widget</p>
+        </div>
+      )}
     </div>
   );
 }
