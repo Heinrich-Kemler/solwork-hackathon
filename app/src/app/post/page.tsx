@@ -6,6 +6,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import CreateJob from "@/components/CreateJob";
 import JupiterSwap from "@/components/JupiterSwap";
 import ProfileGate from "@/components/ProfileGate";
+import { useProfile } from "@/lib/useProfile";
 import dynamic from "next/dynamic";
 
 const WalletMultiButton = dynamic(
@@ -19,7 +20,9 @@ const WalletMultiButton = dynamic(
 export default function PostJobPage() {
   const router = useRouter();
   const { connected } = useWallet();
+  const { profile } = useProfile();
   const [showSwap, setShowSwap] = useState(false);
+  const isFirstPost = profile ? profile.jobsPosted === 0 : true;
 
   return (
     <ProfileGate>
@@ -63,6 +66,21 @@ export default function PostJobPage() {
           </div>
         )}
       </div>
+
+      {/* Activation fee notice */}
+      {connected && isFirstPost && (
+        <div className="rounded-xl p-4 flex items-start gap-3" style={{ background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.15)' }}>
+          <span className="text-lg shrink-0">&#9432;</span>
+          <div>
+            <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+              First-time job post
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              A one-time 0.01 SOL activation fee will be charged on your first job post. This goes to the Accord treasury.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Create form */}
       {connected ? (

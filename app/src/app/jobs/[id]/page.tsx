@@ -22,6 +22,7 @@ import { useToast } from "@/components/TxToast";
 import { useProgramLogs } from "@/lib/useProgramLogs";
 import JobComments from "@/components/JobComments";
 import DisputeVoting from "@/components/DisputeVoting";
+import ConfirmReleaseModal from "@/components/ConfirmReleaseModal";
 
 function CopyableAddress({
   address,
@@ -85,6 +86,7 @@ export default function JobDetailPage({
   const [showDisputeForm, setShowDisputeForm] = useState(false);
   const [releasePercent, setReleasePercent] = useState(100);
   const [showReleaseSlider, setShowReleaseSlider] = useState(false);
+  const [showConfirmRelease, setShowConfirmRelease] = useState(false);
 
   const isClient =
     wallet && job?.client && wallet.publicKey.equals(job.client);
@@ -424,13 +426,11 @@ export default function JobDetailPage({
                 MVP: Full release only. Partial tranches coming in v2.
               </p>
               <button
-                onClick={() => handleAction("approve")}
+                onClick={() => setShowConfirmRelease(true)}
                 disabled={actionLoading === "approve"}
                 className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 rounded-lg text-white font-semibold transition-colors"
               >
-                {actionLoading === "approve"
-                  ? "Releasing..."
-                  : `Release ${((smallestToUsdc(job.amount) * releasePercent) / 100).toFixed(2)} USDC`}
+                {`Release ${((smallestToUsdc(job.amount) * releasePercent) / 100).toFixed(2)} USDC`}
               </button>
             </div>
           )}
@@ -470,6 +470,20 @@ export default function JobDetailPage({
 
       {/* Q&A Comments */}
       <JobComments jobPubkey={id} />
+
+      {/* Payment Confirmation Modal */}
+      {job && (
+        <ConfirmReleaseModal
+          isOpen={showConfirmRelease}
+          onClose={() => setShowConfirmRelease(false)}
+          onConfirm={() => {
+            setShowConfirmRelease(false);
+            handleAction("approve");
+          }}
+          amount={((smallestToUsdc(job.amount) * releasePercent) / 100).toFixed(2)}
+          loading={actionLoading === "approve"}
+        />
+      )}
     </div>
   );
 }
