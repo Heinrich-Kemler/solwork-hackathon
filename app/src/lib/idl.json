@@ -1452,6 +1452,56 @@
       ]
     },
     {
+      "name": "update_avatar",
+      "discriminator": [
+        244,
+        92,
+        83,
+        89,
+        34,
+        220,
+        163,
+        203
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "profile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "signer"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "avatar_uri",
+          "type": "string"
+        }
+      ]
+    },
+    {
       "name": "submit_work",
       "discriminator": [
         158,
@@ -1788,151 +1838,156 @@
     },
     {
       "code": 6005,
+      "name": "AvatarUriTooLong",
+      "msg": "Avatar URI is too long."
+    },
+    {
+      "code": 6006,
       "name": "InvalidUsdcMint",
       "msg": "Invalid USDC mint for this environment."
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "Unauthorized",
       "msg": "Signer is not authorized for this action."
     },
     {
-      "code": 6007,
+      "code": 6008,
       "name": "InvalidStatusTransition",
       "msg": "Invalid status transition for this action."
     },
     {
-      "code": 6008,
+      "code": 6009,
       "name": "JobAlreadyAccepted",
       "msg": "Job was already accepted by a freelancer."
     },
     {
-      "code": 6009,
+      "code": 6010,
       "name": "InvalidFreelancer",
       "msg": "Provided freelancer does not match the job freelancer."
     },
     {
-      "code": 6010,
+      "code": 6011,
       "name": "ClientMismatch",
       "msg": "Client account does not match the job client."
     },
     {
-      "code": 6011,
+      "code": 6012,
       "name": "InvalidTokenOwner",
       "msg": "Token account owner is invalid."
     },
     {
-      "code": 6012,
+      "code": 6013,
       "name": "InvalidTokenMint",
       "msg": "Token account mint is invalid."
     },
     {
-      "code": 6013,
+      "code": 6014,
       "name": "InvalidTreasuryAccount",
       "msg": "Provided treasury token account is invalid."
     },
     {
-      "code": 6014,
+      "code": 6015,
       "name": "JobIdMismatch",
       "msg": "Provided job_id does not match the job account."
     },
     {
-      "code": 6015,
+      "code": 6016,
       "name": "InvalidDeadlineExtension",
       "msg": "New deadline must be greater than current expiry time."
     },
     {
-      "code": 6016,
+      "code": 6017,
       "name": "JobNotExpiredYet",
       "msg": "Job is not expired yet."
     },
     {
-      "code": 6017,
+      "code": 6018,
       "name": "InvalidStatusForExpiry",
       "msg": "Status does not allow expiry."
     },
     {
-      "code": 6018,
+      "code": 6019,
       "name": "WorkNotSubmitted",
       "msg": "Work has not been submitted yet."
     },
     {
-      "code": 6019,
+      "code": 6020,
       "name": "GracePeriodNotElapsed",
       "msg": "Grace period has not elapsed yet."
     },
     {
-      "code": 6020,
+      "code": 6021,
       "name": "UnauthorizedResolver",
       "msg": "Only treasury/admin resolver can resolve disputes."
     },
     {
-      "code": 6021,
+      "code": 6022,
       "name": "InvalidDisputeSplit",
       "msg": "Client and freelancer split must equal escrow amount."
     },
     {
-      "code": 6022,
+      "code": 6023,
       "name": "ReleaseAmountExceedsVaultBalance",
       "msg": "Partial release amount exceeds vault balance."
     },
     {
-      "code": 6023,
+      "code": 6024,
       "name": "EmptyEscrowVault",
       "msg": "Escrow vault is empty."
     },
     {
-      "code": 6024,
+      "code": 6025,
       "name": "InvalidDisputeVote",
       "msg": "Dispute vote account does not match this job."
     },
     {
-      "code": 6025,
+      "code": 6026,
       "name": "UnauthorizedJuror",
       "msg": "Only assigned jurors can cast dispute votes."
     },
     {
-      "code": 6026,
+      "code": 6027,
       "name": "VoteAlreadyCast",
       "msg": "This juror has already voted."
     },
     {
-      "code": 6027,
+      "code": 6028,
       "name": "DisputeAlreadyResolved",
       "msg": "Dispute is already resolved."
     },
     {
-      "code": 6028,
+      "code": 6029,
       "name": "InsufficientVotes",
       "msg": "Not enough votes to resolve dispute."
     },
     {
-      "code": 6029,
+      "code": 6030,
       "name": "NotEnoughEligibleJurors",
       "msg": "At least three eligible jurors are required."
     },
     {
-      "code": 6030,
+      "code": 6031,
       "name": "ReferralAlreadySet",
       "msg": "Referral can only be set once."
     },
     {
-      "code": 6031,
+      "code": 6032,
       "name": "ReferralMustBeSetBeforeCompletion",
       "msg": "Referral must be set before first completion."
     },
     {
-      "code": 6032,
+      "code": 6033,
       "name": "InvalidReferrer",
       "msg": "Invalid referrer profile or token account."
     },
     {
-      "code": 6033,
+      "code": 6034,
       "name": "MissingReferralAccounts",
       "msg": "Missing referrer profile/token accounts in remaining accounts."
     },
     {
-      "code": 6034,
+      "code": 6035,
       "name": "MathOverflow",
       "msg": "Math overflow."
     }
@@ -2403,6 +2458,10 @@
           {
             "name": "reputation_score",
             "type": "i64"
+          },
+          {
+            "name": "avatar_uri",
+            "type": "string"
           },
           {
             "name": "member_since",
