@@ -67,8 +67,24 @@ export default function OnboardingPage() {
 
       const provider = getProvider(connection, wallet);
       const program = getProgram(provider);
-      const tx = await txInitProfile(program, wallet.publicKey);
-      showToast("Profile created on-chain!", "success", tx);
+
+      // Check if on-chain profile already exists — skip init if so
+      let profileAlreadyExists = false;
+      try {
+        const { getProfilePDA } = await import("@/lib/anchor");
+        const [profilePDA] = getProfilePDA(wallet.publicKey);
+        const accountInfo = await connection.getAccountInfo(profilePDA);
+        if (accountInfo && accountInfo.data.length > 0) profileAlreadyExists = true;
+      } catch {
+        // Fetch failed — assume no profile, will try to init
+      }
+
+      if (profileAlreadyExists) {
+        showToast("Profile already exists — welcome back!", "info");
+      } else {
+        const tx = await txInitProfile(program, wallet.publicKey);
+        showToast("Profile created on-chain!", "success", tx);
+      }
 
       // Set referral if provided
       if (!skip && referrer.trim()) {
