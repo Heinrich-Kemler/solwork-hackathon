@@ -10,6 +10,7 @@ pub const MAX_TITLE_LEN: usize = 64;
 pub const MAX_DESCRIPTION_LEN: usize = 256;
 pub const MAX_WORK_DESCRIPTION_LEN: usize = 512;
 pub const MAX_DISPUTE_REASON_LEN: usize = 256;
+pub const MAX_AVATAR_URI_LEN: usize = 128;
 
 #[cfg(feature = "local-testing")]
 pub const DEFAULT_EXPIRY_SECS: i64 = 1;
@@ -53,6 +54,7 @@ pub mod solwork {
         profile.referred_by = None;
         profile.referral_earnings = 0;
         profile.reputation_score = 0;
+        profile.avatar_uri = String::new();
         profile.member_since = now;
         emit!(ProfileInitialized {
             owner: ctx.accounts.signer.key(),
@@ -84,6 +86,22 @@ pub mod solwork {
             user: profile.owner,
             referrer,
         });
+        Ok(())
+    }
+
+    pub fn update_avatar(ctx: Context<UpdateAvatar>, avatar_uri: String) -> Result<()> {
+        require!(
+            avatar_uri.len() <= MAX_AVATAR_URI_LEN,
+            EscrowError::AvatarUriTooLong
+        );
+
+        let profile = &mut ctx.accounts.profile;
+        require_keys_eq!(
+            profile.owner,
+            ctx.accounts.signer.key(),
+            EscrowError::Unauthorized
+        );
+        profile.avatar_uri = avatar_uri;
         Ok(())
     }
 
@@ -1188,6 +1206,20 @@ pub struct SetReferral<'info> {
 }
 
 #[derive(Accounts)]
+pub struct UpdateAvatar<'info> {
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"profile", signer.key().as_ref()],
+        bump,
+        constraint = profile.owner == signer.key() @ EscrowError::Unauthorized,
+    )]
+    pub profile: Account<'info, UserProfile>,
+}
+
+#[derive(Accounts)]
 #[instruction(job_id: u64)]
 pub struct CreateJob<'info> {
     #[account(mut)]
@@ -1785,6 +1817,7 @@ pub struct UserProfile {
     pub referred_by: Option<Pubkey>,
     pub referral_earnings: u64,
     pub reputation_score: i64,
+    pub avatar_uri: String,
     pub member_since: i64,
 }
 
@@ -1800,6 +1833,7 @@ impl UserProfile {
         1 + 32 + // referred_by option
         8 + // referral_earnings
         8 + // reputation_score
+        4 + MAX_AVATAR_URI_LEN + // avatar_uri
         8 // member_since
     }
 }
@@ -1959,6 +1993,8 @@ pub enum EscrowError {
     WorkDescriptionTooLong,
     #[msg("Dispute reason is too long.")]
     DisputeReasonTooLong,
+    #[msg("Avatar URI is too long.")]
+    AvatarUriTooLong,
     #[msg("Invalid USDC mint for this environment.")]
     InvalidUsdcMint,
     #[msg("Signer is not authorized for this action.")]

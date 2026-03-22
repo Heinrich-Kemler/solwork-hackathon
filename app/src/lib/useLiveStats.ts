@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useConnection } from "@solana/wallet-adapter-react";
 import { PROGRAM_ID } from "./anchor";
+import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 
 export interface LiveStats {
   totalJobs: number;
@@ -10,9 +11,14 @@ export interface LiveStats {
   totalCompleted: number;
 }
 
+// Job discriminator: sha256("account:Job")[0..8] = [75, 124, 80, 203, 161, 180, 202, 80]
+const JOB_DISCRIMINATOR = bs58.encode(
+  Buffer.from([75, 124, 80, 203, 161, 180, 202, 80])
+);
+
 /**
  * Fetches aggregate stats from all Job accounts on-chain.
- * Refreshes every 30 seconds.
+ * Single RPC call with discriminator filter. Refreshes every 60s.
  */
 export function useLiveStats() {
   const { connection } = useConnection();
@@ -22,44 +28,38 @@ export function useLiveStats() {
     totalCompleted: 0,
   });
   const [loading, setLoading] = useState(true);
+  const fetchingRef = useRef(false);
 
   const fetchStats = useCallback(async () => {
-    try {
-      // Get all program accounts with the Job discriminator
-      // Job discriminator: first 8 bytes of sha256("account:Job")
-      const allAccounts = await connection.getProgramAccounts(PROGRAM_ID, {
-        dataSlice: { offset: 0, length: 0 }, // We only need the count first
-      });
+    // Prevent concurrent fetches
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
 
-      // For stats, fetch full data to parse amounts and statuses
-      const fullAccounts = await connection.getProgramAccounts(PROGRAM_ID);
+    try {
+      const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
+        filters: [
+          { memcmp: { offset: 0, bytes: JOB_DISCRIMINATOR } },
+        ],
+      });
 
       let totalJobs = 0;
       let totalUsdcLocked = 0;
       let totalCompleted = 0;
 
-      for (const acc of fullAccounts) {
+      for (const acc of accounts) {
         const data = acc.account.data;
-        // Job accounts have discriminator [75, 124, 80, 203, 161, 180, 202, 80]
-        // Check first 8 bytes
-        if (data.length < 50) continue; // Too small to be a Job
-
-        // Skip UserProfile accounts (different discriminator)
-        // We can identify Jobs by their larger size (> 500 bytes typically)
-        if (data.length < 200) continue;
+        if (data.length < 50) continue;
 
         totalJobs++;
 
-        // Parse amount at a known offset — after discriminator(8) + title string(4+len) + desc string(4+len)
-        // This is fragile, but for stats display it's fine
-        // Instead, try to read the status byte to count completions
         try {
-          // Status enum is after: disc(8) + title(4+64max) + desc(4+256max) + amount(8) + client(32) + freelancer(32)
-          // = 8 + 4 + titleLen + 4 + descLen + 8 + 32 + 32
-          // Too variable. Just count all as jobs and estimate.
-
-          // Read amount: it's at offset 8 + 4 + titleLen + 4 + descLen
-          // Read title length first
+          // Borsh layout after 8-byte discriminator:
+          // title: 4-byte length prefix + string bytes
+          // description: 4-byte length prefix + string bytes
+          // amount: u64 (8 bytes)
+          // client: pubkey (32 bytes)
+          // freelancer: pubkey (32 bytes)
+          // status: 1 byte enum index
           const titleLen = data.readUInt32LE(8);
           const descLen = data.readUInt32LE(8 + 4 + titleLen);
           const amountOffset = 8 + 4 + titleLen + 4 + descLen;
@@ -69,11 +69,11 @@ export function useLiveStats() {
             totalUsdcLocked += amount / 1_000_000;
           }
 
-          // Status is after amount(8) + client(32) + freelancer(32) = 72 bytes after amount
+          // Status byte: amount(8) + client(32) + freelancer(32) past amountOffset
           const statusOffset = amountOffset + 8 + 32 + 32;
           if (statusOffset < data.length) {
             const status = data[statusOffset];
-            // JobStatus enum: 0=Open, 1=Active, 2=PendingReview, 3=Complete, 4=Disputed, 5=Expired, 6=Cancelled
+            // 3 = Complete
             if (status === 3) totalCompleted++;
           }
         } catch {
@@ -84,14 +84,16 @@ export function useLiveStats() {
       setStats({ totalJobs, totalUsdcLocked, totalCompleted });
     } catch (err) {
       console.error("Failed to fetch live stats:", err);
+      // Keep previous stats on error instead of zeroing out
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   }, [connection]);
 
   useEffect(() => {
     fetchStats();
-    const interval = setInterval(fetchStats, 30_000);
+    const interval = setInterval(fetchStats, 60_000); // 60s to avoid rate limiting
     return () => clearInterval(interval);
   }, [fetchStats]);
 

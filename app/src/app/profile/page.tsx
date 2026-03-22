@@ -112,8 +112,8 @@ export default function ProfilePage() {
   return (
     <div className="max-w-3xl mx-auto px-6 py-10 space-y-6">
       {/* Header card */}
-      <div className="card-static p-6">
-        <div className="flex items-start gap-5">
+      <div className="card-static p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5">
           <div className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold shrink-0 overflow-hidden" style={{ background: 'var(--accent-subtle)', border: '2px solid var(--border)', color: 'var(--accent)' }}>
             {localProfile.avatar ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -121,9 +121,9 @@ export default function ProfilePage() {
             ) : addr.slice(0, 2).toUpperCase()}
           </div>
 
-          <div className="flex-1 min-w-0 space-y-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-bold truncate" style={{ color: 'var(--text-primary)' }}>{displayName}</h1>
+          <div className="flex-1 min-w-0 space-y-2 text-center sm:text-left">
+            <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+              <h1 className="text-xl sm:text-2xl font-bold truncate" style={{ color: 'var(--text-primary)' }}>{displayName}</h1>
               {exists && <span className={`badge ${tier.class}`}>{tier.label}</span>}
               {localProfile.available && (
                 <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--success)' }}>
@@ -132,8 +132,8 @@ export default function ProfilePage() {
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-sm" style={{ color: 'var(--text-muted)' }}>{addr.slice(0, 8)}...{addr.slice(-6)}</span>
+            <div className="flex items-center gap-2 justify-center sm:justify-start">
+              <span className="font-mono text-sm" style={{ color: 'var(--text-muted)' }}>{addr.slice(0, 6)}...{addr.slice(-4)}</span>
               <button onClick={copyAddr}><Copy size={12} style={{ color: 'var(--text-muted)' }} /></button>
               <a href={explorerAccountUrl(addr)} target="_blank" rel="noopener noreferrer"><ExternalLink size={12} style={{ color: 'var(--text-muted)' }} /></a>
             </div>
@@ -142,7 +142,7 @@ export default function ProfilePage() {
 
             {/* Skills */}
             {localProfile.skills?.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pt-1">
+              <div className="flex flex-wrap gap-1.5 pt-1 justify-center sm:justify-start">
                 {localProfile.skills.map((s) => (
                   <span key={s} className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: 'var(--accent-subtle)', color: 'var(--accent)', border: '1px solid rgba(124,58,237,0.15)' }}>{s}</span>
                 ))}
@@ -150,7 +150,7 @@ export default function ProfilePage() {
             )}
 
             {socialLinks.length > 0 && (
-              <div className="flex gap-2 pt-1">
+              <div className="flex gap-2 pt-1 justify-center sm:justify-start">
                 {socialLinks.map((l) => (
                   <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-md transition-colors" style={{ color: 'var(--text-muted)', background: 'var(--bg-elevated)' }}>
                     <l.icon size={14} />
@@ -160,7 +160,7 @@ export default function ProfilePage() {
             )}
           </div>
 
-          <div className="flex flex-col items-end gap-2 shrink-0">
+          <div className="flex items-center sm:flex-col sm:items-end gap-3 sm:gap-2 shrink-0">
             <div className="text-right">
               <span className="font-mono text-lg font-semibold" style={{ color: 'var(--success)' }}>{balance.toFixed(2)}</span>
               <span className="text-xs ml-1" style={{ color: 'var(--text-muted)' }}>USDC</span>
@@ -194,11 +194,11 @@ export default function ProfilePage() {
 
       {/* Stats */}
       {profileLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           {[1,2,3,4,5].map((i) => <div key={i} className="card-static p-4 animate-pulse"><div className="h-8 rounded" style={{ background: 'var(--bg-elevated)' }} /></div>)}
         </div>
       ) : exists && profile ? (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           {[
             { label: "Reputation", value: repScore.toString() },
             { label: "Completed", value: profile.jobsCompleted.toString() },

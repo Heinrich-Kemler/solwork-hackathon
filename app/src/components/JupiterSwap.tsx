@@ -39,7 +39,7 @@ export default function JupiterSwap({
         window.Jupiter.init({
           displayMode: "integrated",
           integratedTargetId: containerId,
-          endpoint: "https://api.mainnet-beta.solana.com",
+          endpoint: process.env.NEXT_PUBLIC_MAINNET_RPC_URL || "https://lb.drpc.live/solana/AhgFfreYh0lckRG33JFX9MDfeHqiJSAR8YB8urWHF38a",
           formProps: {
             initialInputMint: SOL_MINT,
             initialOutputMint: USDC_MINT,

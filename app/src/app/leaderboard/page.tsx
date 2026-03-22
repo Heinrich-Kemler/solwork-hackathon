@@ -117,55 +117,58 @@ export default function LeaderboardPage() {
           <p style={{ color: 'var(--text-muted)' }}>No profiles found. Connect your wallet to see the leaderboard.</p>
         </div>
       ) : (
-        <div className="card-static overflow-hidden">
-          {/* Header */}
-          <div className="grid grid-cols-12 gap-2 px-4 py-2 text-xs font-medium" style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
-            <div className="col-span-1">#</div>
-            <div className="col-span-4">User</div>
-            <div className="col-span-2 text-right">Score</div>
-            <div className="col-span-1 text-right hidden sm:block">Tier</div>
-            <div className="col-span-2 text-right hidden sm:block">Completed</div>
-            <div className="col-span-2 text-right">Earned</div>
-          </div>
-
-          {entries.map((entry, i) => {
-            const tier = getReputationTier(entry.reputation);
-            return (
-              <a
-                key={entry.wallet}
-                href={explorerAccountUrl(entry.wallet)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="grid grid-cols-12 gap-2 px-4 py-3 items-center transition-colors"
-                style={{ borderBottom: '1px solid var(--border)' }}
-              >
-                <div className="col-span-1 font-bold text-sm" style={rankStyle(i)}>
-                  {i + 1}
-                </div>
-                <div className="col-span-4 flex items-center gap-2 min-w-0">
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ background: 'var(--accent-subtle)', color: 'var(--accent)' }}>
-                    {entry.displayName.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{entry.displayName}</div>
-                    <div className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{entry.wallet.slice(0, 4)}...{entry.wallet.slice(-4)}</div>
-                  </div>
-                </div>
-                <div className="col-span-2 text-right font-bold text-sm" style={{ color: 'var(--accent)' }}>
-                  {entry.reputation}
-                </div>
-                <div className="col-span-1 text-right hidden sm:block">
-                  <span className={`badge ${tier.class}`}>{tier.label}</span>
-                </div>
-                <div className="col-span-2 text-right text-sm hidden sm:block" style={{ color: 'var(--text-secondary)' }}>
-                  {entry.jobsCompleted}
-                </div>
-                <div className="col-span-2 text-right text-sm font-mono" style={{ color: 'var(--success)' }}>
-                  ${entry.totalEarned.toFixed(0)}
-                </div>
-              </a>
-            );
-          })}
+        <div className="card-static overflow-x-auto">
+          <table className="w-full min-w-[480px]">
+            <thead>
+              <tr className="text-xs font-medium" style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
+                <th className="text-left px-4 py-2 w-10">#</th>
+                <th className="text-left px-2 py-2">User</th>
+                <th className="text-right px-2 py-2">Score</th>
+                <th className="text-right px-2 py-2">Tier</th>
+                <th className="text-right px-2 py-2">Jobs</th>
+                <th className="text-right px-4 py-2">Earned</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map((entry, i) => {
+                const tier = getReputationTier(entry.reputation);
+                return (
+                  <tr
+                    key={entry.wallet}
+                    className="transition-colors"
+                    style={{ borderBottom: '1px solid var(--border)' }}
+                  >
+                    <td className="px-4 py-3 font-bold text-sm" style={rankStyle(i)}>
+                      {i + 1}
+                    </td>
+                    <td className="px-2 py-3">
+                      <a href={explorerAccountUrl(entry.wallet)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 min-w-0">
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ background: 'var(--accent-subtle)', color: 'var(--accent)' }}>
+                          {entry.displayName.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{entry.displayName}</div>
+                          <div className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{entry.wallet.slice(0, 4)}...{entry.wallet.slice(-4)}</div>
+                        </div>
+                      </a>
+                    </td>
+                    <td className="px-2 py-3 text-right font-bold text-sm" style={{ color: 'var(--accent)' }}>
+                      {entry.reputation}
+                    </td>
+                    <td className="px-2 py-3 text-right">
+                      <span className={`badge ${tier.class}`}>{tier.label}</span>
+                    </td>
+                    <td className="px-2 py-3 text-right text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      {entry.jobsCompleted}
+                    </td>
+                    <td className="px-4 py-3 text-right text-sm font-mono" style={{ color: 'var(--success)' }}>
+                      ${entry.totalEarned.toFixed(0)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

@@ -118,6 +118,7 @@ export default function TopUpModal({
                 height="440"
                 style={{ border: "none", borderRadius: "12px" }}
                 allow="clipboard-write"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
                 onLoad={() => setIframeLoaded(true)}
               />
             </div>
