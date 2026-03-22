@@ -18,6 +18,7 @@ const TREASURY_WALLET = new PublicKey(
 );
 
 async function run(): Promise<void> {
+  console.log("devnet-smoke: start");
   const baseProvider = anchor.AnchorProvider.env();
   const connection = new anchor.web3.Connection(clusterApiUrl("devnet"), "confirmed");
   const provider = new anchor.AnchorProvider(connection, baseProvider.wallet, {
@@ -42,6 +43,7 @@ async function run(): Promise<void> {
   const jobId = new anchor.BN(Date.now());
   const amount = new anchor.BN(1_000); // 0.001 USDC
 
+  console.log("devnet-smoke: resolving client ATA");
   const clientUsdcAta = (
     await getOrCreateAssociatedTokenAccount(
       connection,
@@ -58,6 +60,7 @@ async function run(): Promise<void> {
     );
   }
 
+  console.log("devnet-smoke: resolving freelancer ATA");
   const freelancerUsdcAta = (
     await getOrCreateAssociatedTokenAccount(
       connection,
@@ -67,6 +70,7 @@ async function run(): Promise<void> {
     )
   ).address;
 
+  console.log("devnet-smoke: funding freelancer with SOL");
   await provider.sendAndConfirm(
     new anchor.web3.Transaction().add(
       anchor.web3.SystemProgram.transfer({
@@ -78,6 +82,7 @@ async function run(): Promise<void> {
     []
   );
 
+  console.log("devnet-smoke: resolving treasury ATA");
   const treasuryUsdcAta = (
     await getOrCreateAssociatedTokenAccount(
       connection,
@@ -146,6 +151,7 @@ async function run(): Promise<void> {
     [Buffer.from("vault"), jobPda.toBuffer()],
     program.programId
   );
+  console.log("devnet-smoke: preflight setup complete");
 
   let createSig = "";
   let createOk = false;
