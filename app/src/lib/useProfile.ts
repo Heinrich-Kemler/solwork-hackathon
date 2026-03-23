@@ -28,7 +28,7 @@ export function useProfile() {
   const [needsRecreate, setNeedsRecreate] = useState(false);
 
   const fetchProfile = useCallback(async () => {
-    if (!wallet) {
+    if (!wallet?.publicKey) {
       setProfile(null);
       setLoading(false);
       setExists(false);
@@ -38,8 +38,16 @@ export function useProfile() {
 
     try {
       setLoading(true);
-      const provider = getProvider(connection, wallet);
-      const program = getProgram(provider);
+      let provider, program;
+      try {
+        provider = getProvider(connection, wallet);
+        program = getProgram(provider);
+      } catch {
+        setProfile(null);
+        setExists(false);
+        setLoading(false);
+        return;
+      }
       const [profilePDA] = getProfilePDA(wallet.publicKey);
 
       // Manual fetch + decode to handle old schema gracefully

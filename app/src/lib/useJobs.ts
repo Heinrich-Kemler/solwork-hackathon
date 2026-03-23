@@ -55,14 +55,21 @@ export function useJobs() {
       setLoading(true);
       setError(null);
 
-      if (!wallet) {
+      if (!wallet?.publicKey) {
         setJobs([]);
         setLoading(false);
         return;
       }
 
-      const provider = getProvider(connection, wallet);
-      const program = getProgram(provider);
+      let provider, program;
+      try {
+        provider = getProvider(connection, wallet);
+        program = getProgram(provider);
+      } catch {
+        setJobs([]);
+        setLoading(false);
+        return;
+      }
 
       // Use getProgramAccounts + manual decode instead of .all()
       // so we can skip stale accounts that throw RangeError
@@ -116,7 +123,7 @@ export function useSingleJob(jobPubkey: string) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchJob = useCallback(async () => {
-    if (!wallet || !jobPubkey) {
+    if (!wallet?.publicKey || !jobPubkey) {
       setLoading(false);
       return;
     }
@@ -125,8 +132,15 @@ export function useSingleJob(jobPubkey: string) {
       setLoading(true);
       setError(null);
 
-      const provider = getProvider(connection, wallet);
-      const program = getProgram(provider);
+      let provider, program;
+      try {
+        provider = getProvider(connection, wallet);
+        program = getProgram(provider);
+      } catch {
+        setError("Wallet not ready");
+        setLoading(false);
+        return;
+      }
       const pubkey = new PublicKey(jobPubkey);
 
       // Manual fetch + decode to handle stale accounts gracefully

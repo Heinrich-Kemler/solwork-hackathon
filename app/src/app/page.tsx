@@ -28,7 +28,7 @@ export default function Home() {
         <p className="mt-6 text-lg md:text-xl max-w-2xl leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
           Trustless. Instant. Global.
           <br className="hidden md:block" />
-          No middlemen, no fees, no waiting.
+          No middlemen, lowest fees, no waiting.
         </p>
         <div className="mt-10 flex flex-col sm:flex-row gap-4 items-center">
           <WalletMultiButton />

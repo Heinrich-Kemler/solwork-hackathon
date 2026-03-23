@@ -94,7 +94,7 @@ export default function JobsPage() {
     // Sort — skills-matched jobs first in "working" mode
     list = [...list];
 
-    if (mode === "working" && localProfile.skills.length > 0) {
+    if (mode === "working" && localProfile?.skills?.length > 0) {
       const mySkills = new Set(localProfile.skills.map((s) => s.toLowerCase()));
       list.sort((a, b) => {
         const aMeta = decodeJobMeta(a.description).meta;
@@ -120,7 +120,7 @@ export default function JobsPage() {
     }
 
     return list;
-  }, [jobs, publicKey, mode, search, filter, minAmount, maxAmount, sortBy, categoryFilter, localProfile.skills]);
+  }, [jobs, publicKey, mode, search, filter, minAmount, maxAmount, sortBy, categoryFilter, localProfile?.skills]);
 
   const modeLabel = mode === "hiring" ? "Your Posted Jobs" : "Available Jobs";
 
@@ -311,9 +311,9 @@ export default function JobsPage() {
               onAction={refresh}
               highlighted={
                 mode === "working" &&
-                localProfile.skills.length > 0 &&
+                (localProfile?.skills?.length ?? 0) > 0 &&
                 decodeJobMeta(job.description).meta.skills.some((s) =>
-                  localProfile.skills.some(
+                  (localProfile?.skills ?? []).some(
                     (ms) => ms.toLowerCase() === s.toLowerCase()
                   )
                 )
