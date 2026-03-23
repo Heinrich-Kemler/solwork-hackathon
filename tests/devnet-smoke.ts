@@ -4,6 +4,7 @@ import { Keypair, PublicKey, clusterApiUrl } from "@solana/web3.js";
 import fs from "fs";
 import path from "path";
 import {
+  createTransferInstruction,
   getAccount,
   getOrCreateAssociatedTokenAccount,
   TOKEN_PROGRAM_ID,
@@ -27,6 +28,7 @@ async function run(): Promise<void> {
   anchor.setProvider(provider);
 
   const wallet = provider.wallet as anchor.Wallet & { payer: Keypair };
+  const client = Keypair.generate();
   const programIdRaw = process.env.SOLWORK_PROGRAM_ID;
   if (!programIdRaw) {
     throw new Error("Set SOLWORK_PROGRAM_ID to the deployed devnet program ID.");
@@ -43,8 +45,8 @@ async function run(): Promise<void> {
   const jobId = new anchor.BN(Date.now());
   const amount = new anchor.BN(1_000); // 0.001 USDC
 
-  console.log("devnet-smoke: resolving client ATA");
-  const clientUsdcAta = (
+  console.log("devnet-smoke: resolving funding wallet ATA");
+  const fundingUsdcAta = (
     await getOrCreateAssociatedTokenAccount(
       connection,
       wallet.payer,
@@ -53,12 +55,52 @@ async function run(): Promise<void> {
     )
   ).address;
 
-  const clientUsdcBalance = (await getAccount(connection, clientUsdcAta)).amount;
-  if (clientUsdcBalance < BigInt(amount.toString())) {
+  const fundingUsdcBalance = (await getAccount(connection, fundingUsdcAta)).amount;
+  if (fundingUsdcBalance < BigInt(amount.toString())) {
     throw new Error(
-      `Insufficient devnet USDC. Need ${amount.toString()} base units in ${clientUsdcAta.toBase58()}.`
+      `Insufficient devnet USDC. Need ${amount.toString()} base units in ${fundingUsdcAta.toBase58()}.`
     );
   }
+
+  console.log("devnet-smoke: funding client and freelancer with SOL");
+  await provider.sendAndConfirm(
+    new anchor.web3.Transaction().add(
+      anchor.web3.SystemProgram.transfer({
+        fromPubkey: wallet.publicKey,
+        toPubkey: client.publicKey,
+        lamports: 1_200_000_000,
+      }),
+      anchor.web3.SystemProgram.transfer({
+        fromPubkey: wallet.publicKey,
+        toPubkey: freelancer.publicKey,
+        lamports: 1_000_000_000,
+      })
+    ),
+    []
+  );
+
+  console.log("devnet-smoke: resolving client ATA");
+  const clientUsdcAta = (
+    await getOrCreateAssociatedTokenAccount(
+      connection,
+      wallet.payer,
+      DEVNET_USDC_MINT,
+      client.publicKey
+    )
+  ).address;
+
+  console.log("devnet-smoke: transferring USDC to client");
+  await provider.sendAndConfirm(
+    new anchor.web3.Transaction().add(
+      createTransferInstruction(
+        fundingUsdcAta,
+        clientUsdcAta,
+        wallet.publicKey,
+        BigInt(amount.toString())
+      )
+    ),
+    []
+  );
 
   console.log("devnet-smoke: resolving freelancer ATA");
   const freelancerUsdcAta = (
@@ -69,18 +111,6 @@ async function run(): Promise<void> {
       freelancer.publicKey
     )
   ).address;
-
-  console.log("devnet-smoke: funding freelancer with SOL");
-  await provider.sendAndConfirm(
-    new anchor.web3.Transaction().add(
-      anchor.web3.SystemProgram.transfer({
-        fromPubkey: wallet.publicKey,
-        toPubkey: freelancer.publicKey,
-        lamports: 1_000_000_000,
-      })
-    ),
-    []
-  );
 
   console.log("devnet-smoke: resolving treasury ATA");
   const treasuryUsdcAta = (
@@ -94,7 +124,7 @@ async function run(): Promise<void> {
   ).address;
 
   const [clientProfile] = PublicKey.findProgramAddressSync(
-    [Buffer.from("profile"), wallet.publicKey.toBuffer()],
+    [Buffer.from("profile"), client.publicKey.toBuffer()],
     program.programId
   );
   const [freelancerProfile] = PublicKey.findProgramAddressSync(
@@ -103,23 +133,20 @@ async function run(): Promise<void> {
   );
 
   let initClientOk = true;
-  if (!(await connection.getAccountInfo(clientProfile))) {
-    try {
-      await program.methods
-        .initProfile()
-        .accounts({
-          signer: wallet.publicKey,
-          profile: clientProfile,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        } as any)
-        .rpc();
-      console.log("init_profile(client): PASS");
-    } catch (error) {
-      initClientOk = false;
-      console.error("init_profile(client): FAIL", error);
-    }
-  } else {
-    console.log("init_profile(client): PASS (already initialized)");
+  try {
+    await program.methods
+      .initProfile()
+      .accounts({
+        signer: client.publicKey,
+        profile: clientProfile,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
+      .signers([client])
+      .rpc();
+    console.log("init_profile(client): PASS");
+  } catch (error) {
+    initClientOk = false;
+    console.error("init_profile(client): FAIL", error);
   }
 
   let initFreelancerOk = true;
@@ -142,7 +169,7 @@ async function run(): Promise<void> {
   const [jobPda] = PublicKey.findProgramAddressSync(
     [
       Buffer.from("job"),
-      wallet.publicKey.toBuffer(),
+      client.publicKey.toBuffer(),
       jobId.toArrayLike(Buffer, "le", 8),
     ],
     program.programId
@@ -159,7 +186,7 @@ async function run(): Promise<void> {
     createSig = await program.methods
       .createJob(jobId, "Devnet smoke", "Smoke test escrow flow", amount)
       .accounts({
-        client: wallet.publicKey,
+        client: client.publicKey,
         job: jobPda,
         clientProfile,
         usdcMint: DEVNET_USDC_MINT,
@@ -170,6 +197,7 @@ async function run(): Promise<void> {
         systemProgram: anchor.web3.SystemProgram.programId,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       } as any)
+      .signers([client])
       .rpc();
     createOk = true;
     console.log("create_job: PASS");
@@ -185,7 +213,7 @@ async function run(): Promise<void> {
         .acceptJob(jobId)
         .accounts({
           freelancer: freelancer.publicKey,
-          client: wallet.publicKey,
+          client: client.publicKey,
           job: jobPda,
         } as any)
         .signers([freelancer])
@@ -207,7 +235,7 @@ async function run(): Promise<void> {
         .submitWork(jobId, "Smoke-test deliverable submitted")
         .accounts({
           freelancer: freelancer.publicKey,
-          client: wallet.publicKey,
+          client: client.publicKey,
           job: jobPda,
         } as any)
         .signers([freelancer])
@@ -228,7 +256,7 @@ async function run(): Promise<void> {
       approveSig = await program.methods
         .approveJob(jobId)
         .accounts({
-          client: wallet.publicKey,
+          client: client.publicKey,
           job: jobPda,
           usdcMint: DEVNET_USDC_MINT,
           escrowVault: vaultPda,
@@ -242,6 +270,7 @@ async function run(): Promise<void> {
           referrerUsdcAta: freelancerUsdcAta,
           tokenProgram: TOKEN_PROGRAM_ID,
         } as any)
+        .signers([client])
         .rpc();
       approveOk = true;
       console.log("approve_job: PASS");
@@ -264,6 +293,8 @@ async function run(): Promise<void> {
 
   console.log("Devnet smoke test passed.");
   console.log(`Program ID: ${program.programId.toBase58()}`);
+  console.log(`Client: ${client.publicKey.toBase58()}`);
+  console.log(`Freelancer: ${freelancer.publicKey.toBase58()}`);
   console.log(`Job PDA: ${jobPda.toBase58()}`);
   console.log(`Create tx: ${createSig}`);
   console.log(`Accept tx: ${acceptSig}`);
